@@ -1,0 +1,16 @@
+vendor/
+node_modules/
+.env
+.DS_Store
+
+# Logs
+*.log
+
+# Uploads (if dynamic user uploads)
+uploads/
+
+# IDE files
+.vscode/
+
+# OS files
+Thumbs.db
