@@ -100,6 +100,72 @@ nav a:hover::after {
     background: var(--gold);
     color: var(--espresso);
 }
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-login {
+    padding: 10px 22px;
+    background: transparent;
+    border: 1px solid var(--terracotta);
+    color: var(--terracotta);
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: 0.3s ease;
+}
+
+.header-login:hover {
+    background: var(--terracotta);
+    color: white;
+}
+
+/* --- Dropdown specific styles --- */
+.dropdown {
+    position: relative; /* Needed for absolute positioning of dropdown */
+}
+
+.dropdown > a {
+    cursor: pointer;
+}
+
+/* Dropdown content hidden by default */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 30px; /* Adjust to align below nav link */
+    left: 0;
+    background: rgba(244,239,230,0.98); /* Match header background */
+    backdrop-filter: blur(8px);
+    min-width: 180px;
+    border: 1px solid var(--light-grey);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 1000;
+    flex-direction: column;
+}
+
+/* Dropdown links */
+.dropdown-content a {
+    padding: 10px 15px;
+    color: var(--espresso);
+    font-size: 14px;
+    font-weight: 500;
+    display: block;
+    text-decoration: none;
+}
+
+.dropdown-content a:hover {
+    background: var(--gold);
+    color: var(--espresso);
+}
+
+/* Show dropdown on hover */
+.dropdown:hover .dropdown-content {
+    display: flex;
+    flex-direction: column;
+}
 
 /* HERO */
 .hero {
@@ -248,18 +314,29 @@ footer p {
     <nav>
         <a href="#">Home</a>
         <a href="collection.html">Collections</a>
-        <a href="#">B2B</a>
+        <!-- B2B Dropdown -->
+        <div class="dropdown">  
+          <a href="#">B2B ▾</a>
+          <div class="dropdown-content">
+            <a href="b2b-landing.html">For Businesses</a>
+            <a href="bulk-orders.html">Bulk Orders</a>
+            <a href="case-studies.html">Case Studies</a>
+          </div>
+        </div>
         <a href="#">About</a>
         <a href="#">Contact</a>
     </nav>
-    <a href="#" class="header-btn">Enquire Now</a>
+    <div class="header-actions">
+        <a href="login.html" class="header-login">Login</a>
+        <a href="#" class="header-btn">Enquire Now</a>
+    </div>
 </header>
 
 <section class="hero">
     <div>
         <h1>Handcrafted Stories in Clay</h1>
         <p>Experience the timeless beauty of Indian Lippan Art — where tradition, texture, and luxury unite in every handcrafted creation.</p>
-        <a href="#" class="btn">Explore Collection</a>
+        <a href="collection.html" class="btn">Explore Collection</a>
     </div>
 </section>
 
