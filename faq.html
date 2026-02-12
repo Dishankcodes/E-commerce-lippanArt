@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frequently Asked Questions | AURALOOM</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+/* --- CORE BRAND VARIABLES --- */
+:root {
+    --espresso: #2E1C16;
+    --maroon: #5A1E1E;
+    --terracotta: #A3472D;
+    --gold: #B08D57;
+    --ivory: #F4EFE6;
+    --white: #FFFFFF;
+    --light-grey: #e6dfd5;
+    --border-color: #dcd3c9;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--ivory);
+    color: var(--espresso);
+    line-height: 1.6;
+}
+
+/* TOP BAR & HEADER */
+.top-bar {
+    background: var(--espresso);
+    color: var(--ivory);
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: rgba(244,239,230,0.98);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--maroon);
+    text-decoration: none;
+}
+
+nav { display: flex; gap: 35px; }
+
+nav a {
+    text-decoration: none;
+    color: var(--espresso);
+    font-weight: 500;
+    font-size: 14px;
+    position: relative;
+}
+
+.header-btn {
+    padding: 10px 22px;
+    background: var(--terracotta);
+    color: white;
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: 0.3s ease;
+}
+
+/* --- HERO & SEARCH SECTION --- */
+.faq-hero {
+    text-align: center;
+    padding: 80px 20px 60px;
+    background: linear-gradient(to bottom, #f4efe6, #ebe4d8);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.faq-hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    color: var(--maroon);
+    margin-bottom: 20px;
+}
+
+/* Visual Search Bar (No Functionality in Pure CSS) */
+.search-container {
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold);
+}
+
+#faqSearch {
+    width: 100%;
+    padding: 15px 20px 15px 50px;
+    border: 1px solid var(--gold);
+    border-radius: 50px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    outline: none;
+    background: white;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+/* --- MAIN CONTENT CONTAINER --- */
+.faq-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 20px;
+}
+
+/* SECTION TITLES */
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    margin-top: 50px;
+    border-bottom: 2px solid var(--light-grey);
+    padding-bottom: 15px;
+}
+.section-header:first-of-type { margin-top: 0; }
+
+.section-icon {
+    font-size: 24px;
+    color: var(--terracotta);
+    margin-right: 15px;
+}
+
+.section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    color: var(--espresso);
+}
+
+/* --- PURE CSS ACCORDION (USING DETAILS/SUMMARY) --- */
+details {
+    background: white;
+    border: 1px solid var(--border-color);
+    margin-bottom: 15px;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+details:hover {
+    border-color: var(--gold);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+}
+
+/* Style the Summary (The Clickable Header) */
+summary {
+    padding: 20px 25px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--espresso);
+    list-style: none; /* Hides default triangle */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: color 0.3s;
+}
+
+/* Remove default marker for Webkit */
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary:hover {
+    color: var(--terracotta);
+}
+
+/* Create Custom Icon using After */
+summary::after {
+    content: '\f078'; /* FontAwesome Chevron Down */
+    font-family: 'Font Awesome 5 Free'; 
+    font-weight: 900;
+    font-size: 12px;
+    color: var(--gold);
+    transition: transform 0.3s ease;
+}
+
+/* Rotate Icon when Open */
+details[open] summary::after {
+    transform: rotate(180deg);
+    color: var(--terracotta);
+}
+
+/* Style the Content */
+.faq-answer {
+    padding: 0 25px 25px;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.8;
+    background: #faf9f6;
+    border-top: 1px solid #f0f0f0;
+}
+
+.highlight-link {
+    color: var(--terracotta);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* SUPPORT CTA SECTION */
+.support-cta {
+    text-align: center;
+    margin-top: 80px;
+    padding: 60px;
+    background: var(--espresso);
+    color: var(--ivory);
+    border-radius: 4px;
+}
+
+.support-cta h2 {
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 15px;
+}
+
+.contact-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 30px;
+    background: var(--gold);
+    color: var(--espresso);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: 0.3s;
+}
+
+.contact-btn:hover { background: var(--terracotta); color: white; }
+
+/* FOOTER */
+footer {
+    background: var(--espresso);
+    color: var(--ivory);
+    padding: 60px 40px;
+    text-align: center;
+    margin-top: 40px;
+}
+footer p { margin: 10px 0; font-size: 14px; opacity: 0.8; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    header { padding: 15px 20px; }
+    nav { display: none; }
+    .faq-hero h1 { font-size: 32px; }
+    .faq-container { padding: 40px 20px; }
+    summary { font-size: 15px; padding: 15px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    ✨ Free Shipping Across India | Wholesale Inquiries Welcome
+</div>
+
+<header>
+    <a href="index.html" class="logo">AURALOOM</a>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="collection.html">Collections</a>
+        <a href="#">B2B</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+        
+    </nav>
+    <a href="cart.html" class="header-btn">Cart (0)</a>
+</header>
+
+<section class="faq-hero">
+    <h1>Frequently Asked Questions</h1>
+    <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="faqSearch" placeholder="Search by keyword (e.g., 'Returns', 'Bulk', 'Shipping')...">
+    </div>
+</section>
+
+<div class="faq-container">
+
+    <div class="faq-section">
+        <div class="section-header">
+            <i class="fas fa-user-circle section-icon"></i>
+            <h2 class="section-title">General & Orders</h2>
+        </div>
+
+        <details>
+            <summary>What materials are used in your Lippan Art?</summary>
+            <div class="faq-answer">
+                <p>Auraloom pieces are crafted using authentic Kutch clay sourced from Gujarat. We use high-quality, water-resistant MDF boards as a base for durability, along with real glass mirrors (Aabhla) to create the signature reflective effect.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>How do I clean and maintain the artwork?</summary>
+            <div class="faq-answer">
+                <p>Since our art is made of clay relief work, <strong>do not use water or wet cloth</strong>. We recommend gently dusting it with a soft-bristle paintbrush or a dry microfiber cloth. Keep away from direct moisture or high-humidity areas like bathrooms.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>What is your shipping and delivery timeline?</summary>
+            <div class="faq-answer">
+                <p>For in-stock items, we dispatch within 48 hours. Delivery typically takes 5-7 business days across India. Custom orders require 10-14 days for creation before shipping. You will receive a tracking link via email/WhatsApp once dispatched.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>Do you accept returns if the item is damaged?</summary>
+            <div class="faq-answer">
+                <p>Yes. We take extreme care in packaging (3-layer bubble wrap + wooden crate). However, if you receive a damaged piece, please send us an unboxing video within 24 hours of delivery. We will offer a free replacement or a full refund.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>Can I customize the color or size?</summary>
+            <div class="faq-answer">
+                <p>Absolutely! We specialize in custom orders. You can choose specific dimensions, frame colors, or mirror patterns. Visit our <a href="#" class="highlight-link">Custom Orders</a> page or WhatsApp us to discuss your requirements.</p>
+            </div>
+        </details>
+    </div>
+
+    <div class="faq-section" style="margin-top: 40px;">
+        <div class="section-header">
+            <i class="fas fa-briefcase section-icon"></i>
+            <h2 class="section-title">Trade & Wholesale (B2B)</h2>
+        </div>
+
+        <details>
+            <summary>Do you offer trade discounts for Architects and Interior Designers?</summary>
+            <div class="faq-answer">
+                <p>Yes, we have a dedicated Trade Program offering exclusive pricing tiers (15-25% off) for industry professionals. Please register on our <a href="#" class="highlight-link">B2B Portal</a> with your business details to access trade pricing.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>What is the minimum order quantity (MOQ) for bulk pricing?</summary>
+            <div class="faq-answer">
+                <p>Our bulk pricing tiers start at an MOQ of 5 units. For corporate gifting or large hotel projects (50+ units), we offer deeper discounts and custom branding options.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>Can I request a sample before placing a large order?</summary>
+            <div class="faq-answer">
+                <p>Yes, we can ship a 6"x6" sample tile or a full-size prototype. Samples are charged at retail price initially, but this cost is fully adjusted/refunded against your final bulk order.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>What are the payment terms for commercial orders?</summary>
+            <div class="faq-answer">
+                <p>For commercial orders, we require a 50% advance deposit to begin production, with the remaining 50% due prior to dispatch. We provide GST invoices for all B2B transactions.</p>
+            </div>
+        </details>
+    </div>
+
+    <div class="support-cta">
+        <h2>Still have questions?</h2>
+        <p>Our support team is available Monday to Saturday, 10 AM - 7 PM IST.</p>
+        <a href="#" class="contact-btn">Contact Support</a>
+    </div>
+
+</div>
+
+<footer>
+    <p>AURALOOM</p>
+    <p>Luxury handcrafted Lippan Art blending tradition & elegance.</p>
+    <p>© 2026 AURALOOM.</p>
+</footer>
+
+</body>
+</html>
