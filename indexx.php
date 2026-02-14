@@ -688,6 +688,44 @@ $feedbackQuery = mysqli_query($conn, "
         display: none;
       }
     }
+    /* ================= ADD TO CART (NEW & FIXED) ================= */
+.product-card form{
+display:flex;
+justify-content:center;
+padding:0 15px;
+}
+
+.add-cart-btn{
+width:100%;
+padding:12px 0;
+border:none;
+border-radius:30px;
+background:linear-gradient(135deg,#c46a3b,#a85830);
+color:#fff;
+font-size:14px;
+font-weight:600;
+letter-spacing:.5px;
+cursor:pointer;
+transition:all .35s ease;
+box-shadow:0 10px 22px rgba(196,106,59,.35);
+}
+
+.add-cart-btn:hover{
+transform:translateY(-2px);
+box-shadow:0 14px 28px rgba(196,106,59,.55);
+background:linear-gradient(135deg,#d87846,#b85f34);
+}
+
+.add-cart-btn:active{
+transform:scale(.96);
+}
+
+@media(max-width:768px){
+.add-cart-btn{
+font-size:13px;
+padding:11px 0;
+}
+}
   </style>
 </head>
 

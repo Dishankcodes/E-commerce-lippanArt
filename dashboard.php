@@ -2,126 +2,495 @@
 session_start();
 include("db.php");
 
-if(!isset($_SESSION['admin_email'])){
+// --- Security Check ---
+if (!isset($_SESSION['admin_email'])) {
     header("Location: login.php");
     exit();
 }
 
-// Total Customers
+// --- Data Fetching ---
 $customer_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM customers"))['total'];
-
-// Total Products
 $product_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM products"))['total'];
-
-// Total Categories
 $category_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM categories"))['total'];
-
-// Total Orders
 $order_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM orders"))['total'];
 
-// Recent Customers
 $recent_customers = mysqli_query($conn, "SELECT * FROM customers ORDER BY id DESC LIMIT 5");
-
-// Recent Products
 $recent_products = mysqli_query($conn, "SELECT * FROM products ORDER BY id DESC LIMIT 5");
+
+// Total Custom Orders
+$custom_order_count = mysqli_fetch_assoc(
+    mysqli_query($conn, "SELECT COUNT(*) as total FROM custom_orders")
+)['total'];
+
+// Recent Custom Orders
+$recent_custom_orders = mysqli_query(
+    $conn,
+    "SELECT * FROM custom_orders ORDER BY id DESC LIMIT 5"
+);
+
+$items_sold = mysqli_fetch_assoc(
+    mysqli_query(
+        $conn,
+        "SELECT COALESCE(SUM(quantity),0) AS total FROM order_items"
+    )
+)['total'];
+
+
+$recent_reviews = mysqli_query(
+    $conn,
+    "SELECT 
+        r.id,
+        r.rating,
+        r.status,
+        r.created_at,
+        p.name AS product_name,
+        c.name AS customer_name
+     FROM product_reviews r
+     JOIN products p ON r.product_id = p.id
+     JOIN customers c ON r.user_id = c.id
+     ORDER BY r.created_at DESC
+     LIMIT 5"
+);
+// Total B2B Enquiries
+$b2b_count = mysqli_fetch_assoc(
+    mysqli_query($conn, "SELECT COUNT(*) as total FROM b2b_enquiries")
+)['total'];
+
+// Recent B2B Enquiries
+$recent_b2b = mysqli_query(
+    $conn,
+    "SELECT * FROM b2b_enquiries ORDER BY id DESC LIMIT 5"
+);
+
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Auraloom</title>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* --- BRAND VARIABLES --- */
+        :root {
+            --bg-dark: #0f0d0b;
+            --bg-soft: #171411;
+            --card-bg: #1b1815;
+            --text-main: #f3ede7;
+            --text-muted: #b9afa6;
+            --accent: #c46a3b;
+            --border-soft: rgba(255, 255, 255, 0.12);
+        }
+
+        /* --- RESET & TYPOGRAPHY --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            /* Standard Text */
+            background: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: 0.3s;
+        }
+
+        /* --- HEADER --- */
+        header {
+            background: rgba(15, 13, 11, 0.95);
+            border-bottom: 1px solid var(--border-soft);
+            padding: 22px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            /* Brand Font */
+            font-size: 28px;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+
+        .admin-badge {
+            font-family: 'Poppins', sans-serif;
+            font-size: 11px;
+            background: var(--accent);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 2px;
+            margin-left: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+
+        .logout-btn {
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            border: 1px solid var(--border-soft);
+            padding: 8px 24px;
+            color: var(--text-muted);
+            border-radius: 30px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-main);
+            background: var(--accent);
+        }
+
+        /* --- LAYOUT --- */
+        .container {
+            max-width: 1200px;
+            margin: 60px auto;
+            padding: 0 30px;
+        }
+
+        h2.page-title {
+            font-family: 'Playfair Display', serif;
+            /* Heading Font */
+            font-size: 38px;
+            margin-bottom: 40px;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border-soft);
+            padding-bottom: 20px;
+        }
+
+        /* --- STAT CARDS --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 60px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-soft);
+            padding: 30px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            position: relative;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+        }
+
+        .stat-card h5 {
+            font-family: 'Poppins', sans-serif;
+            /* Label Font */
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .stat-card h3 {
+            font-family: 'Playfair Display', serif;
+            /* Number Font */
+            font-size: 48px;
+            color: var(--accent);
+            font-weight: 400;
+        }
+
+        /* --- DATA PANELS --- */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .data-panel {
+            background: var(--bg-soft);
+            border: 1px solid var(--border-soft);
+            padding: 35px;
+        }
+
+        .data-panel h4 {
+            font-family: 'Playfair Display', serif;
+            /* Heading Font */
+            font-size: 24px;
+            margin-bottom: 25px;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border-soft);
+            padding-bottom: 15px;
+        }
+
+        .data-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: 0.3s;
+            border-left: 2px solid transparent;
+        }
+
+        .data-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-left: 2px solid var(--accent);
+        }
+
+        .data-primary {
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            color: var(--text-main);
+            font-weight: 400;
+            display: block;
+        }
+
+        .data-sub {
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+        }
+
+        .price-tag {
+            font-family: 'Playfair Display', serif;
+            /* Price Font (Classic look) */
+            color: var(--accent);
+            font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 15px 20px;
+            }
+
+            .stat-card h3 {
+                font-size: 36px;
+            }
+        }
+    </style>
 </head>
-<body class="bg-light">
 
-<div class="container mt-4">
+<body>
 
-    <h3 class="mb-4">Admin Dashboard</h3>
+    <header>
+        <div class="logo">
+            Auraloom <span class="admin-badge">Admin</span>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
+    </header>
 
-    <!-- STAT CARDS -->
-    <div class="row">
+    <div class="container">
+        <h2 class="page-title">Dashboard Overview</h2>
 
-        <div class="col-md-3">
-            <a href="manage_customers.php" style="text-decoration:none;">
-                <div class="card text-white bg-primary mb-3 shadow">
-                    <div class="card-body">
-                        <h5>Total Customers</h5>
-                        <h3><?php echo $customer_count; ?></h3>
-                    </div>
+        <div class="stats-grid">
+            <a href="manage_customers.php" class="stat-card">
+                <div>
+                    <h5>Customers</h5>
+                    <h3><?php echo $customer_count; ?></h3>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-3">
-            <a href="manage_products.php" style="text-decoration:none;">
-                <div class="card text-white bg-success mb-3 shadow">
-                    <div class="card-body">
-                        <h5>Total Products</h5>
-                        <h3><?php echo $product_count; ?></h3>
-                    </div>
+            <a href="manage_products.php" class="stat-card">
+                <div>
+                    <h5>Products</h5>
+                    <h3><?php echo $product_count; ?></h3>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-3">
-            <a href="manage_categories.php" style="text-decoration:none;">
-                <div class="card text-white bg-warning mb-3 shadow">
-                    <div class="card-body">
-                        <h5>Total Categories</h5>
-                        <h3><?php echo $category_count; ?></h3>
-                    </div>
+            <a href="manage_categories.php" class="stat-card">
+                <div>
+                    <h5>Categories</h5>
+                    <h3><?php echo $category_count; ?></h3>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-3">
-            <a href="manage_orders.php" style="text-decoration:none;">
-                <div class="card text-white bg-danger mb-3 shadow">
-                    <div class="card-body">
-                        <h5>Total Orders</h5>
-                        <h3><?php echo $order_count; ?></h3>
-                    </div>
+            <a href="manage_orders.php" class="stat-card">
+                <div>
+                    <h5>Orders</h5>
+                    <h3><?php echo $order_count; ?></h3>
                 </div>
             </a>
+
+            <a href="manage_custom_orders.php" class="stat-card">
+                <div>
+                    <h5>Custom Orders</h5>
+                    <h3>
+                        <?php echo $custom_order_count; ?>
+                    </h3>
+                </div>
+            </a>
+
+
+            <a href="manage_carts.php" class="stat-card">
+                <div>
+                    <h5>Items Sold</h5>
+                    <h3><?php echo $items_sold; ?></h3>
+
+                </div>
+            </a>
+
+            <a href="manage_b2b.php" class="stat-card">
+                <div>
+                    <h5>B2B Enquiries</h5>
+                    <h3>
+                        <?php echo $b2b_count; ?>
+                    </h3>
+                </div>
+            </a>
+
         </div>
 
-    </div>
+        <div class="content-grid">
 
-    <!-- RECENT CUSTOMERS -->
-    <div class="row mt-4">
-
-        <div class="col-md-6">
-            <div class="card shadow p-3">
-                <h5>Recent Customers</h5>
-                <ul class="list-group">
-                    <?php while($row = mysqli_fetch_assoc($recent_customers)) { ?>
-                        <li class="list-group-item">
-                            <?php echo $row['name']; ?> (<?php echo $row['email']; ?>)
-                        </li>
+            <div class="data-panel">
+                <h4>Recent Customers</h4>
+                <div class="data-list">
+                    <?php while ($row = mysqli_fetch_assoc($recent_customers)) { ?>
+                        <div class="data-item">
+                            <div>
+                                <span class="data-primary"><?php echo htmlspecialchars($row['name']); ?></span>
+                                <span class="data-sub"><?php echo htmlspecialchars($row['email']); ?></span>
+                            </div>
+                        </div>
                     <?php } ?>
-                </ul>
+                </div>
             </div>
-        </div>
 
-        <!-- RECENT PRODUCTS -->
-        <div class="col-md-6">
-            <div class="card shadow p-3">
-                <h5>Recently Added Products</h5>
-                <ul class="list-group">
-                    <?php while($row = mysqli_fetch_assoc($recent_products)) { ?>
-                        <li class="list-group-item">
-                            <?php echo $row['name']; ?> - ₹<?php echo $row['price']; ?>
-                        </li>
+            <div class="data-panel">
+                <h4>New Products</h4>
+                <div class="data-list">
+                    <?php while ($row = mysqli_fetch_assoc($recent_products)) { ?>
+                        <div class="data-item">
+                            <div>
+                                <span class="data-primary"><?php echo htmlspecialchars($row['name']); ?></span>
+                                <span class="data-sub">ID: #<?php echo $row['id']; ?></span>
+                            </div>
+                            <span class="price-tag">₹<?php echo $row['price']; ?></span>
+                        </div>
                     <?php } ?>
-                </ul>
+                </div>
             </div>
+
+            <div class="data-panel">
+                <h4>Recent Custom Orders</h4>
+
+                <div class="data-list">
+                    <?php while ($row = mysqli_fetch_assoc($recent_custom_orders)) { ?>
+                        <a href="manage_custom_orders.php#order-<?php echo $row['id']; ?>" class="data-item">
+
+                            <div>
+                                <span class="data-primary">
+                                    <?php echo htmlspecialchars($row['name']); ?>
+                                </span>
+                                <span class="data-sub">
+                                    <?php echo htmlspecialchars($row['order_type']); ?> •
+                                    <?php echo ucfirst($row['status']); ?>
+                                </span>
+                            </div>
+
+                            <span class="price-tag">
+                                <?php echo $row['budget'] ? '₹' . $row['budget'] : '—'; ?>
+                            </span>
+
+                        </a>
+                    <?php } ?>
+                </div>
+            </div>
+
+            <div class="data-panel">
+                <h4>Recent Reviews</h4>
+
+                <div class="data-list">
+                    <?php while ($row = mysqli_fetch_assoc($recent_reviews)) { ?>
+                        <div class="data-item">
+
+                            <div>
+                                <span class="data-primary">
+                                    <?php echo htmlspecialchars($row['customer_name']); ?>
+                                    •
+                                    <?php echo htmlspecialchars($row['product_name']); ?>
+                                </span>
+
+                                <span class="data-sub">
+                                    <?php echo $row['rating']; ?>★ •
+                                    <?php echo ucfirst($row['status']); ?> •
+                                    <?php echo date("M d", strtotime($row['created_at'])); ?>
+                                </span>
+                            </div>
+
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
+            <div class="data-panel">
+                <h4>Recent B2B Enquiries</h4>
+
+                <div class="data-list">
+                    <?php while ($row = mysqli_fetch_assoc($recent_b2b)) {
+
+                        $waText = urlencode(
+                            "Hello " . $row['business_name'] .
+                            ", this is AURALOOM regarding your B2B enquiry."
+                        );
+                        ?>
+                        <div class="data-item">
+
+                            <div>
+                                <span class="data-primary">
+                                    <?php echo htmlspecialchars($row['business_name']); ?>
+                                </span>
+
+                                <span class="data-sub">
+                                    <?php echo htmlspecialchars($row['business_type']); ?> •
+                                    Qty:
+                                    <?php echo $row['quantity']; ?> •
+                                    <?php echo ucfirst($row['status']); ?>
+                                </span>
+                            </div>
+
+                            <a href="https://wa.me/91<?php echo $row['phone']; ?>?text=<?php echo $waText; ?>"
+                                target="_blank" class="price-tag" style="font-size:14px">
+                                WhatsApp
+                            </a>
+
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
+
         </div>
-
     </div>
-
-    <a href="logout.php" class="btn btn-dark mt-4">Logout</a>
-
-</div>
 
 </body>
+
 </html>

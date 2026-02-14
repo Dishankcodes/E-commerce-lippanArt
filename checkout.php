@@ -40,7 +40,7 @@ if (isset($_POST['place_order'])) {
     $phone = mysqli_real_escape_string($conn, $_POST['phone']);
     $address = mysqli_real_escape_string($conn, $_POST['address']);
 
-    // Insert Order
+    // 1️⃣ Insert order
     mysqli_query($conn, "INSERT INTO orders 
         (customer_name, customer_email, customer_phone, address, total_amount, discount_amount, final_amount)
         VALUES
@@ -48,57 +48,63 @@ if (isset($_POST['place_order'])) {
 
     $order_id = mysqli_insert_id($conn);
 
-    // Insert Order Items + Reduce Stock
+    // 2️⃣ Build WhatsApp message FIRST
+    $customer_message = "✅ *Order Confirmed!* \n\n";
+    $customer_message .= "Hi $name 👋\n";
+    $customer_message .= "Your order *#$order_id* has been placed successfully.\n\n";
+    $customer_message .= "🧾 *Order Summary:*\n";
+
     foreach ($_SESSION['cart'] as $id => $qty) {
 
-        $product_query = mysqli_query($conn, "SELECT * FROM products WHERE id='$id'");
-        $product = mysqli_fetch_assoc($product_query);
+        $product = mysqli_fetch_assoc(
+            mysqli_query($conn, "SELECT * FROM products WHERE id='$id'")
+        );
 
-        if (!$product)
-            continue;
+        if (!$product || $product['stock'] < $qty) {
+            die("Stock issue detected. Please try again.");
+        }
 
-        $price = $product['price'];
-
-        // Save order item
+        // 3️⃣ Save order items
         mysqli_query($conn, "INSERT INTO order_items
             (order_id, product_id, quantity, price)
             VALUES
-            ('$order_id','$id','$qty','$price')");
+            ('$order_id','$id','$qty','{$product['price']}')");
 
-        // Reduce stock
-        $new_stock = $product['stock'] - $qty;
-
+        // 4️⃣ Reduce stock
         mysqli_query($conn, "UPDATE products 
-            SET stock='$new_stock'
+            SET stock = stock - $qty
             WHERE id='$id'");
+
+        $customer_message .= "• {$product['name']} × $qty\n";
     }
 
-    // Clear cart + coupon
+    $customer_message .= "\nSubtotal: ₹$grand_total";
+    if ($discount > 0) {
+        $customer_message .= "\nDiscount: −₹$discount";
+    }
+    $customer_message .= "\n*Total Paid: ₹$final_total*\n\n";
+    $customer_message .= "🙏 Thank you for shopping with *Auraloom*";
+
+    // 5️⃣ Clear cart ONLY ONCE
     unset($_SESSION['cart']);
     unset($_SESSION['coupon']);
 
-    $seller_phone = "919510809453"; // your seller number
-    $customer_phone = $phone;
-
-    $message = "New Order #%23$order_id\n";
-    $message .= "Customer: $name\n";
-    $message .= "Phone: $phone\n";
-    $message .= "Total: ₹$final_total\n\n";
-    $message .= "Items:\n";
-
-    foreach ($_SESSION['cart'] as $id => $qty) {
-        $product_query = mysqli_query($conn, "SELECT name FROM products WHERE id='$id'");
-        $product = mysqli_fetch_assoc($product_query);
-        $message .= $product['name'] . " x " . $qty . "\n";
+    // 6️⃣ Normalize phone number (India)
+    $customer_phone = preg_replace('/\D/', '', $phone);
+    if (strlen($customer_phone) == 10) {
+        $customer_phone = "91" . $customer_phone;
     }
 
-    $encoded_message = urlencode($message);
+    // // 7️⃣ Redirect to CUSTOMER WhatsApp
+    // header("Location: https://wa.me/$customer_phone?text=" . urlencode($customer_message));
+    // exit();
 
-    // Send to seller
-    header("Location: https://wa.me/$seller_phone?text=$encoded_message");
+    $_SESSION['last_order_id'] = $order_id;
+    header("Location: order-success.php");
     exit();
 
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -107,7 +113,90 @@ if (isset($_POST['place_order'])) {
 <head>
     <title>Checkout</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-   </head>
+</head>
+<style>
+    :root {
+        --bg-dark: #0f0d0b;
+        --bg-soft: #171411;
+        --text-main: #f3ede7;
+        --text-muted: #b9afa6;
+        --accent: #c46a3b;
+        --border-soft: rgba(255, 255, 255, 0.12);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: var(--bg-dark);
+        color: var(--text-main);
+        line-height: 1.6;
+    }
+
+    h3,
+    h5 {
+        font-family: 'Playfair Display', serif;
+    }
+
+    .container {
+        max-width: 1100px;
+    }
+
+    .checkout-card {
+        background: var(--bg-soft);
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+    }
+
+    .form-control,
+    textarea {
+        background: transparent;
+        border: 1px solid var(--border-soft);
+        color: var(--text-main);
+    }
+
+    .form-control::placeholder,
+    textarea::placeholder {
+        color: var(--text-muted);
+    }
+
+    .form-control:focus,
+    textarea:focus {
+        background: transparent;
+        color: var(--text-main);
+        border-color: var(--accent);
+        box-shadow: none;
+    }
+
+    .btn-dark {
+        background: var(--accent);
+        border: none;
+    }
+
+    .btn-dark:hover {
+        background: #a95a32;
+    }
+
+    .btn-outline-dark {
+        border-color: var(--border-soft);
+        color: var(--text-muted);
+    }
+
+    .btn-outline-dark:hover {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+
+    .total {
+        font-size: 22px;
+        color: var(--accent);
+    }
+</style>
 
 <body>
 
@@ -143,17 +232,22 @@ if (isset($_POST['place_order'])) {
 
             <div class="col-md-6">
 
-                <div class="card p-4 shadow">
-
+                <div class="card checkout-card p-4 shadow-sm">
                     <h5>Order Summary</h5>
                     <hr>
 
-                    <p>Subtotal: ₹<?php echo number_format($grand_total, 2); ?></p>
-                    <p>Discount: ₹<?php echo number_format($discount, 2); ?></p>
+                    <p>Subtotal: ₹<?= number_format($grand_total, 2) ?></p>
+
+                    <?php if ($discount > 0): ?>
+                        <p class="text-success">
+                            <?= $discount_label ?> − ₹<?= number_format($discount, 2) ?>
+                        </p>
+                    <?php endif; ?>
 
                     <hr>
-                    <h5>Total Payable: ₹<?php echo number_format($final_total, 2); ?></h5>
-
+                    <h5 class="total">
+                        Total Payable: ₹<?= number_format($final_total, 2) ?>
+                    </h5>
                 </div>
 
             </div>
