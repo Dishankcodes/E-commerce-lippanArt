@@ -903,7 +903,7 @@ $rating = mysqli_fetch_assoc($rating_q);
 
 
   <section class="related-products">
-    <h2 class="section-title">You May Also Like</h2>
+    <h2 class="section-title">Similar Products</h2><br>
 
     <div class="product-grid">
       <?php if (mysqli_num_rows($related_q) > 0): ?>

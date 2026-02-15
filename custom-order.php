@@ -1,6 +1,9 @@
 <?php
 session_start();
 include("db.php");
+
+$customer_id = $_SESSION['customer_id'] ?? null;
+
 // ================= PREFILL USER DETAILS =================
 $prefill_name = '';
 $prefill_email = '';
@@ -36,13 +39,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $idea = trim($_POST['idea']);
 
   $stmt = mysqli_prepare($conn, "
-    INSERT INTO custom_orders 
-    (name, email, phone, order_type, budget, idea)
-    VALUES (?, ?, ?, ?, ?, ?)
+   INSERT INTO custom_orders 
+(customer_id, name, email, phone, order_type, budget, idea)
+VALUES (?, ?, ?, ?, ?, ?, ?)
   ");
   mysqli_stmt_bind_param(
     $stmt,
-    "ssssss",
+    "issssss",
+    $customer_id,
     $name,
     $email,
     $phone,
@@ -75,6 +79,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       --text-main: #f3ede7;
       --text-muted: #b9afa6;
       --accent: #c46a3b;
+      --accent-hover: #a85830;
       --border-soft: rgba(255, 255, 255, .12);
     }
 
@@ -82,33 +87,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     * {
       margin: 0;
       padding: 0;
-      box-sizing: border-box
+      box-sizing: border-box;
     }
 
     body {
       font-family: 'Poppins', sans-serif;
       background: var(--bg-dark);
       color: var(--text-main);
+      line-height: 1.6;
     }
 
     a {
       text-decoration: none;
-      color: inherit
+      color: inherit;
+      transition: 0.3s ease;
     }
 
-    /* ================= NAVBAR (SAME AS HOME) ================= */
+    /* ================= HEADER ================= */
     header {
       position: fixed;
       top: 0;
       width: 100%;
-      height: 72px;
+      height: 80px;
       z-index: 1000;
       background: rgba(15, 13, 11, .85);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(15px);
       border-bottom: 1px solid var(--border-soft);
-
-      display: grid;
-      grid-template-columns: auto 1fr auto;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
       padding: 0 80px;
     }
@@ -116,22 +122,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .logo {
       font-family: 'Playfair Display', serif;
       font-size: 28px;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
     }
 
     nav {
       display: flex;
-      justify-content: center;
-      gap: 36px;
+      gap: 40px;
     }
 
     nav a {
-      position: relative;
-      font-size: 13px;
-      letter-spacing: 1.5px;
+      font-size: 12px;
+      letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--text-muted);
-      padding-bottom: 6px;
+      position: relative;
+      padding-bottom: 5px;
+    }
+
+    nav a:hover,
+    nav a.active {
+      color: var(--text-main);
     }
 
     nav a::after {
@@ -142,7 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       width: 0%;
       height: 1px;
       background: var(--accent);
-      transition: .35s ease;
+      transition: 0.4s ease;
     }
 
     nav a:hover::after,
@@ -150,25 +160,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       width: 100%;
     }
 
-    nav a:hover,
-    nav a.active {
-      color: var(--text-main);
-    }
-
     .header-btn {
-      padding: 10px 22px;
+      padding: 10px 24px;
       background: var(--accent);
       color: #fff;
       font-size: 13px;
       letter-spacing: 1px;
+      transition: 0.3s;
     }
 
-    /* ================= HERO ================= */
+    .header-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ================= HERO / FORM SECTION ================= */
     .hero {
       min-height: 100vh;
-      padding-top: 120px;
+      padding: 140px 0 80px;
       background:
-        radial-gradient(circle at right, rgba(196, 106, 59, .18), transparent 60%),
+        radial-gradient(circle at right, rgba(196, 106, 59, .15), transparent 60%),
         linear-gradient(to bottom, var(--bg-dark), var(--bg-soft));
       display: flex;
       align-items: center;
@@ -176,34 +186,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .hero-inner {
       width: 100%;
-      max-width: 1400px;
+      max-width: 1300px;
       margin: auto;
-      padding: 0 80px;
+      padding: 0 40px;
       display: grid;
-      grid-template-columns: 1.1fr .9fr;
-      gap: 80px;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 100px;
       align-items: center;
     }
 
-    /* LEFT FORM */
+    /* FORM BOX */
     .form-box h1 {
       font-family: 'Playfair Display', serif;
-      font-size: 42px;
-      margin-bottom: 10px;
+      font-size: 48px;
+      margin-bottom: 15px;
+      line-height: 1.1;
     }
 
     .form-box p {
       color: var(--text-muted);
-      margin-bottom: 40px;
+      margin-bottom: 45px;
+      font-size: 16px;
     }
 
     .input-group {
-      margin-bottom: 26px;
+      margin-bottom: 30px;
     }
 
-    label {
-      font-size: 13px;
-      color: var(--text-muted);
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      margin-bottom: 8px;
     }
 
     input,
@@ -216,26 +232,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       padding: 12px 0;
       color: var(--text-main);
       font-family: 'Poppins', sans-serif;
-    }
-
-    /* FIX SELECT DROPDOWN */
-    select {
-      color: var(--text-main);
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      cursor: pointer;
-    }
-
-    select option {
-      background: var(--bg-dark);
-      color: var(--text-main);
-    }
-
-
-    textarea {
-      resize: none;
-      height: 90px
+      font-size: 15px;
+      transition: 0.3s;
     }
 
     input:focus,
@@ -245,21 +243,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       border-bottom-color: var(--accent);
     }
 
+    select option {
+      background: var(--bg-dark);
+      color: var(--text-main);
+    }
+
+    textarea {
+      height: 100px;
+      resize: none;
+    }
+
     .submit-btn {
-      margin-top: 30px;
-      padding: 14px 40px;
+      margin-top: 20px;
+      padding: 15px 45px;
       background: var(--accent);
       border: none;
       color: #fff;
-      letter-spacing: 1px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 13px;
       cursor: pointer;
+      transition: 0.3s;
     }
 
-    /* RIGHT INFO */
+    .submit-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+    }
+
+    /* RIGHT SIDE INFO */
     .info-box h2 {
       font-family: 'Playfair Display', serif;
       font-size: 32px;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
     .info-box ul {
@@ -268,21 +284,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     .info-box li {
-      margin-bottom: 14px;
+      margin-bottom: 18px;
       color: var(--text-muted);
+      font-size: 15px;
     }
 
-    .info-box strong {
-      color: var(--text-main);
+    .info-box li strong {
+      color: var(--accent);
+      margin-right: 10px;
     }
 
-    /* DECOR IMAGE */
     .lippan-mini {
-      margin-top: 40px;
-      width: 220px;
-      opacity: .9;
+      width: 280px;
+      opacity: .8;
       animation: slowRotate 80s linear infinite;
-      filter: drop-shadow(0 25px 40px rgba(0, 0, 0, .6));
+      filter: drop-shadow(0 30px 50px rgba(0, 0, 0, .5));
+      display: block;
+      margin: 40px auto 0;
     }
 
     @keyframes slowRotate {
@@ -295,27 +313,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       }
     }
 
-    /* MOBILE */
-    @media(max-width:900px) {
-      header {
-        padding: 0 30px
-      }
-
-      nav {
-        display: none
-      }
-
-      .hero-inner {
-        grid-template-columns: 1fr;
-        padding: 0 30px;
-      }
-
-      .lippan-mini {
-        width: 160px;
-        margin: auto;
-      }
-    }
-
+    /* ================= FOOTER ================= */
     footer {
       background: #0b0a08;
       padding: 100px 80px 60px;
@@ -331,9 +329,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     footer h4 {
       font-size: 14px;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
+      color: var(--text-main);
     }
 
     footer a,
@@ -346,10 +345,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .footer-bottom {
       text-align: center;
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-muted);
       border-top: 1px solid var(--border-soft);
       padding-top: 30px;
+      letter-spacing: 1px;
+    }
+
+    @media(max-width:900px) {
+      header {
+        padding: 0 30px
+      }
+
+      nav {
+        display: none
+      }
+
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 60px;
+        padding: 0 20px;
+      }
+
+      .form-box h1 {
+        font-size: 36px;
+      }
     }
   </style>
 </head>
@@ -357,14 +377,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 
   <header>
-    <div class="logo">Auraloom</div>
+    <a href="index.php" class="logo">Auraloom</a>
     <nav>
       <a href="index.php">Home</a>
       <a href="collection.php">Collection</a>
       <a href="custom-order.php" class="active">Custom</a>
       <a href="b2b.php">B2B</a>
       <a href="about-us.php">About us</a>
-      <a href="contact.php">Contact</a>
+      <a href="contact_us.php">Contact</a>
     </nav>
     <a href="cart.php" class="header-btn">Cart</a>
   </header>
@@ -372,74 +392,76 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <section class="hero">
     <div class="hero-inner">
 
-      <!-- LEFT -->
       <div class="form-box">
         <h1>Custom Order Request</h1>
-        <p>Tell us your vision. Our artisans will bring it to life.</p>
+        <p>Tell us your vision. Our artisans will bring it to life with traditional Kutch craftsmanship.</p>
+
         <?php if ($success): ?>
-          <p style="color:#7CFFB2;margin-bottom:20px;">
+          <div
+            style="background: rgba(124, 255, 178, 0.1); border: 1px solid #7CFFB2; padding: 15px; color: #7CFFB2; margin-bottom: 30px; font-size: 14px;">
             <?= htmlspecialchars($success) ?>
-          </p>
+          </div>
         <?php endif; ?>
 
         <form method="post">
-
           <div class="input-group">
-            <label>Your Name *</label>
-            <input type="text" name="name" required value="<?= htmlspecialchars($prefill_name) ?>">
-
+            <label>Full Name *</label>
+            <input type="text" name="name" required placeholder="Enter your name"
+              value="<?= htmlspecialchars($prefill_name) ?>">
           </div>
 
-          <div class="input-group">
-            <label>Email *</label>
-            <input type="email" name="email" required value="<?= htmlspecialchars($prefill_email) ?>">
-
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="input-group">
+              <label>Email Address *</label>
+              <input type="email" name="email" required placeholder="email@example.com"
+                value="<?= htmlspecialchars($prefill_email) ?>">
+            </div>
+            <div class="input-group">
+              <label>Phone Number *</label>
+              <input type="text" name="phone" required placeholder="+91 XXXX XXX XXX"
+                value="<?= htmlspecialchars($prefill_phone) ?>">
+            </div>
           </div>
 
-          <div class="input-group">
-            <label>Phone *</label>
-            <input type="text" name="phone" required value="<?= htmlspecialchars($prefill_phone) ?>">
-
-          </div>
-
-          <div class="input-group">
-            <label>Order Type</label>
-            <select name="order_type">
-              <option>Home Decor</option>
-              <option>Wall Installation</option>
-              <option>Commercial / Cafe</option>
-              <option>Corporate Gifting</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label>Approx Budget (₹)</label>
-            <input type="text" name="budget">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="input-group">
+              <label>Order Type</label>
+              <select name="order_type">
+                <option>Home Decor</option>
+                <option>Wall Installation</option>
+                <option>Commercial / Cafe</option>
+                <option>Corporate Gifting</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Approx Budget (₹)</label>
+              <input type="text" name="budget" placeholder="e.g. 10,000">
+            </div>
           </div>
 
           <div class="input-group">
             <label>Describe Your Idea *</label>
-            <textarea name="idea" required></textarea>
+            <textarea name="idea" required
+              placeholder="Tell us about the size, colors, or theme you have in mind..."></textarea>
           </div>
 
           <button class="submit-btn">Submit Request</button>
         </form>
       </div>
 
-      <!-- RIGHT -->
       <div class="info-box">
         <h2>What Happens Next?</h2>
         <ul>
-          <li>• Design team reviews your request</li>
-          <li>• Sketches & references shared</li>
-          <li>• Pricing & timeline discussion</li>
-          <li>• <strong>Handcrafted creation begins ✨</strong></li>
+          <li><strong>01.</strong> Design team reviews your request</li>
+          <li><strong>02.</strong> Sketches & references shared</li>
+          <li><strong>03.</strong> Pricing & timeline discussion</li>
+          <li><strong>04.</strong> Handcrafted creation begins ✨</li>
         </ul>
 
         <h2>Bulk & B2B Orders</h2>
-        <p class="text-muted">
-          Cafés, hotels, offices & large installations.<br>
-          Custom sizes, themes & branding available.
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          Transforming cafés, hotels, and large residences with bespoke heritage installations. Custom branding and
+          themes available.
         </p>
 
         <img src="a.png" alt="Lippan Art" class="lippan-mini">
@@ -447,21 +469,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     </div>
   </section>
-  <footer class="reveal">
+
+  <footer>
     <div class="footer-grid">
       <div>
         <h4>Auraloom</h4>
-        <p>Handcrafted Lippan Art<br>Rooted in Kutch</p>
+        <p>Handcrafted Lippan Art<br>Rooted in Kutch Tradition.</p>
       </div>
       <div>
         <h4>Explore</h4>
-        <a href="collection.php">Shop</a>
+        <a href="collection.php">Shop Collection</a>
         <a href="custom-order.php">Custom Art</a>
         <a href="about-us.php">About Us</a>
       </div>
       <div>
         <h4>Business</h4>
-        <a href="#">B2B Orders</a>
+        <a href="b2b.php">B2B Orders</a>
         <a href="#">Collaborations</a>
         <a href="#">Care Guide</a>
       </div>
@@ -471,9 +494,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <p>WhatsApp: +91 XXXXX XXXXX</p>
       </div>
     </div>
-
     <div class="footer-bottom">
-      © 2026 Auraloom · Handcrafted in India
+      © 2026 Auraloom · Handcrafted with soul in India
     </div>
   </footer>
 </body>

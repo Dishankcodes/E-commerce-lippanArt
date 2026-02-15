@@ -35,29 +35,22 @@ $orders = mysqli_query(
      ORDER BY id DESC"
 );
 
-
 $b2b_orders = mysqli_query($conn, "
     SELECT *
     FROM b2b_enquiries
-    WHERE email = '{$user['email']}'
+    WHERE customer_id = $customer_id
     ORDER BY id DESC
 ");
 
 $custom_orders = mysqli_query($conn, "
-  SELECT *
-  FROM custom_orders
-  WHERE email = '{$user['email']}'
-  ORDER BY id DESC
+    SELECT *
+    FROM custom_orders
+    WHERE customer_id = $customer_id
+    ORDER BY id DESC
 ");
+
 $hasOrders = mysqli_num_rows($orders) > 0;
 $hasB2B = mysqli_num_rows($b2b_orders) > 0;
-
-/* CUSTOM ORDERS (if you add later) */
-$custom_orders = mysqli_query($conn, "
-  SELECT * FROM custom_orders
-  WHERE email = '{$user['email']}'
-  ORDER BY id DESC
-");
 $hasCustom = mysqli_num_rows($custom_orders) > 0;
 
 
@@ -352,7 +345,7 @@ $hasCustom = mysqli_num_rows($custom_orders) > 0;
 
                             <a href="order-details.php?id=<?= $o['id'] ?>" class="btn">
                                 View Details
-                            </a>    
+                            </a>
 
 
                             <a href="track-order.php?id=<?= $o['id'] ?>" class="btn">Track Order</a>
@@ -422,6 +415,20 @@ $hasCustom = mysqli_num_rows($custom_orders) > 0;
                                 <strong>₹<?= htmlspecialchars($c['budget'] ?: '—') ?></strong>
                             </p>
 
+                            <?php if (!empty($c['amount'])): ?>
+                                <p>
+                                    Final Amount:
+                                    <strong style="color:#7dd87d;">
+                                        ₹<?= number_format($c['amount'], 2) ?>
+                                    </strong>
+                                </p>
+                            <?php else: ?>
+                                <p class="muted">
+                                    Final amount will be shared after review
+                                </p>
+                            <?php endif; ?>
+
+
                             <p class="muted">
                                 Status:
                                 <strong><?= ucfirst($c['status']) ?></strong>
@@ -429,7 +436,7 @@ $hasCustom = mysqli_num_rows($custom_orders) > 0;
 
                             <div style="margin-top:14px">
 
-                                <?php if ($c['status'] === 'approved'): ?>
+                                <?php if ($c['status'] === 'approved' && $c['payment_status'] === 'Requested'): ?>
                                     <a href="custom-checkout.php?id=<?= $c['id'] ?>" class="btn">
                                         💳 Proceed to Payment
                                     </a>

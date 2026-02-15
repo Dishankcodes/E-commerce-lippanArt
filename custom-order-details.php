@@ -20,9 +20,73 @@ $custom = mysqli_fetch_assoc(mysqli_query($conn, "
   LIMIT 1
 "));
 
-if (!$custom) {
-  die("Custom order not found.");
-}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Request Unavailable | Auraloom</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body{
+      background:#0f0d0b;
+      color:#f3ede7;
+      font-family:Poppins,sans-serif;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .card{
+      background:#171411;
+      border:1px solid rgba(255,255,255,.12);
+      padding:40px;
+      max-width:420px;
+      text-align:center;
+    }
+    .icon{
+      font-size:42px;
+      color:#c46a3b;
+      margin-bottom:15px;
+    }
+    .muted{
+      color:#b9afa6;
+      font-size:14px;
+      margin-top:10px;
+    }
+    .btn{
+      display:inline-block;
+      margin-top:25px;
+      padding:12px 26px;
+      background:#c46a3b;
+      color:#fff;
+      text-decoration:none;
+      font-size:13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="icon">
+      <i class="bi bi-info-circle"></i>
+    </div>
+    <h2>Request Unavailable</h2>
+    <p class="muted">
+      This custom order is no longer accessible.<br>
+      It may have been completed or does not belong to your account.
+    </p>
+    <a href="order-history.php" class="btn">
+      Back to My Orders
+    </a>
+  </div>
+
+</body>
+</html>
+<?php
+exit;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,6 +95,7 @@ if (!$custom) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Custom Request #<?= $custom['id'] ?> | Auraloom</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500&display=swap"
@@ -199,7 +264,7 @@ if (!$custom) {
 
   <header>
     <div class="logo">AURALOOM</div>
-    <a href="custom-order.php" class="muted">← Custom Orders</a>
+    <a href="order-history.php" class="muted">← My Orders</a>
   </header>
 
   <div class="container">
@@ -223,6 +288,24 @@ if (!$custom) {
         ₹<?= htmlspecialchars($custom['budget']) ?>
       </div>
 
+      <?php if (!empty($custom['amount'])): ?>
+        <div class="card-row">
+          <strong>Final Amount (Admin):</strong>
+          <span style="color:#7dd87d;font-size:16px;">
+            ₹<?= number_format($custom['amount'], 2) ?>
+          </span>
+        </div>
+
+        <div class="card-row">
+          <strong>Payment Status:</strong>
+          <?= ucfirst($custom['payment_status']) ?>
+        </div>
+      <?php else: ?>
+        <div class="card-row muted">
+          Final amount will be shared after admin review.
+        </div>
+      <?php endif; ?>
+
       <hr style="margin:20px 0;border:0;border-top:1px solid var(--border)">
 
       <div class="card-row">
@@ -236,17 +319,32 @@ if (!$custom) {
     </div>
 
     <div class="actions">
+      <?php if (
+        $custom['status'] === 'approved' &&
+        $custom['payment_status'] === 'Requested' &&
+        !empty($custom['amount'])
+      ): ?>
 
-      <?php if ($custom['status'] === 'approved'): ?>
-        <a href="custom-checkout.php?id=<?= $custom['id'] ?>" class="btn primary">
-          💳 Proceed to Payment
-        </a>
+        <form method="post" action="pay-custom.php">
+          <input type="hidden" name="order_id" value="<?= $custom['id'] ?>">
+          <button class="btn primary">
+            <i class="bi bi-check-circle-fill"></i> Payment Done
+          </button>
+        </form>
+
+      <?php elseif ($custom['payment_status'] === 'Paid'): ?>
+
+        <span class="muted" style="color:#7dd87d;">
+          <i class="bi bi-check-lg"></i> Payment completed. Our team is working on your order.
+        </span>
+
       <?php else: ?>
+
         <span class="muted">
           Payment will be enabled once your request is approved.
         </span>
-      <?php endif; ?>
 
+      <?php endif; ?>
       <a href="custom-order.php" class="btn secondary">
         New Custom Order
       </a>

@@ -2,17 +2,34 @@
 session_start();
 include("db.php");
 
-if (!isset($_SESSION['customer_id'])) {
-    header("Location: login.php?redirect=checkout.php");
-    exit;
+/* =============================
+   PREFILL CUSTOMER DETAILS
+============================= */
+$prefill_name = '';
+$prefill_email = '';
+$prefill_phone = '';
+
+$customer_id = $_SESSION['customer_id'] ?? null;
+
+if ($customer_id) {
+    $res = mysqli_query($conn, "
+        SELECT name, email, phone 
+        FROM customers 
+        WHERE id = $customer_id 
+        LIMIT 1
+    ");
+
+    if ($res && mysqli_num_rows($res) === 1) {
+        $u = mysqli_fetch_assoc($res);
+        $prefill_name = $u['name'];
+        $prefill_email = $u['email'];
+        $prefill_phone = $u['phone'];
+    }
 }
 
-$customer_id = (int) $_SESSION['customer_id'];
-
-$user = mysqli_fetch_assoc(
-    mysqli_query($conn, "SELECT name, email, phone FROM customers WHERE id=$customer_id")
-);
-
+/* =============================
+   CART CHECK
+============================= */
 if (empty($_SESSION['cart'])) {
     header("Location: cart.php");
     exit();
@@ -21,575 +38,750 @@ if (empty($_SESSION['cart'])) {
 /* =============================
    CALCULATE TOTALS
 ============================= */
-$grand_total = 0;
+$pricing = $_SESSION['pricing'] ?? null;
 
-foreach ($_SESSION['cart'] as $id => $qty) {
-    $product_query = mysqli_query($conn, "SELECT * FROM products WHERE id='$id'");
-    $product = mysqli_fetch_assoc($product_query);
-
-    if (!$product)
-        continue;
-
-    $grand_total += $product['price'] * $qty;
+if (!$pricing) {
+    header("Location: cart.php");
+    exit;
 }
 
-$discount = 0;
-if (isset($_SESSION['coupon'])) {
-    $discount = ($grand_total * $_SESSION['coupon']['discount_percent']) / 100;
-}
-
-$final_total = $grand_total - $discount;
-
+$grand_total = $pricing['subtotal'];
+$discount_percent = $pricing['discount_percent'];
+$discount_amount = $pricing['discount_amount'];
+$final_total = $pricing['final_total'];
 
 /* =============================
    PLACE ORDER
 ============================= */
+$stock_issue = false;
+$stock_products = [];
+
 if (isset($_POST['place_order'])) {
 
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-    $address = mysqli_real_escape_string($conn, $_POST['address']);
-
-    // 1️⃣ Insert order
-    mysqli_query($conn, "INSERT INTO orders 
-(customer_id, customer_name, customer_email, customer_phone, address, total_amount, discount_amount, final_amount)
-VALUES
-('$customer_id','$name','$email','$phone','$address','$grand_total','$discount','$final_total')");
-
-    $order_id = mysqli_insert_id($conn);
-
-    // 2️⃣ Build WhatsApp message FIRST
-    $customer_message = "✅ *Order Confirmed!* \n\n";
-    $customer_message .= "Hi $name 👋\n";
-    $customer_message .= "Your order *#$order_id* has been placed successfully.\n\n";
-    $customer_message .= "🧾 *Order Summary:*\n";
-
     foreach ($_SESSION['cart'] as $id => $qty) {
-
-        $product = mysqli_fetch_assoc(
-            mysqli_query($conn, "SELECT * FROM products WHERE id='$id'")
+        $p = mysqli_fetch_assoc(
+            mysqli_query($conn, "SELECT name, stock FROM products WHERE id=$id")
         );
 
-        if (!$product || $product['stock'] < $qty) {
-            die("Stock issue detected. Please try again.");
+        if (!$p || $p['stock'] < $qty) {
+            $stock_issue = true;
+            $stock_products[] = $p['name'] ?? 'Product';
+        }
+    }
+
+    /* =============================
+      CONTINUE ONLY IF STOCK OK
+   ============================= */
+    if (!$stock_issue) {
+
+        $name = mysqli_real_escape_string($conn, $_POST['name']);
+        $email = mysqli_real_escape_string($conn, $_POST['email']);
+        $phone = mysqli_real_escape_string($conn, $_POST['phone']);
+        $address = mysqli_real_escape_string($conn, $_POST['address']);
+
+        // Keep logged-in email safe
+        if ($customer_id) {
+            $email = $prefill_email;
         }
 
-        // 3️⃣ Save order items
-        mysqli_query($conn, "INSERT INTO order_items
-            (order_id, product_id, quantity, price)
-            VALUES
-            ('$order_id','$id','$qty','{$product['price']}')");
+        $customer_id_sql = $customer_id ? "'$customer_id'" : "NULL";
 
-        // 4️⃣ Reduce stock
-        mysqli_query($conn, "UPDATE products 
-            SET stock = stock - $qty
-            WHERE id='$id'");
+        /* INSERT ORDER */
+        mysqli_query($conn, "
+            INSERT INTO orders (
+                customer_id,
+                customer_name,
+                customer_email,
+                customer_phone,
+                address,
+                total_amount,
+                discount_amount,
+                final_amount
+            ) VALUES (
+                $customer_id_sql,
+                '$name',
+                '$email',
+                '$phone',
+                '$address',
+                '$grand_total',
+                '$discount_amount',
+                '$final_total'
+            )
+        ");
 
-        $customer_message .= "• {$product['name']} × $qty\n";
+        $order_id = mysqli_insert_id($conn);
+
+        /* INSERT ORDER ITEMS + UPDATE STOCK */
+        foreach ($_SESSION['cart'] as $id => $qty) {
+
+            $product = mysqli_fetch_assoc(
+                mysqli_query($conn, "SELECT price FROM products WHERE id = $id")
+            );
+
+            mysqli_query($conn, "
+                INSERT INTO order_items (order_id, product_id, quantity, price)
+                VALUES ('$order_id', '$id', '$qty', '{$product['price']}')
+            ");
+
+            mysqli_query($conn, "
+                UPDATE products
+                SET stock = stock - $qty
+                WHERE id = $id
+            ");
+        }
+
+        /* CLEAN SESSION */
+        unset($_SESSION['cart']);
+        unset($_SESSION['coupon']);
+
+        $_SESSION['last_order_id'] = $order_id;
+
+        header("Location: order-success.php");
+        exit();
     }
-
-    $customer_message .= "\nSubtotal: ₹$grand_total";
-    if ($discount > 0) {
-        $customer_message .= "\nDiscount: −₹$discount";
-    }
-    $customer_message .= "\n*Total Paid: ₹$final_total*\n\n";
-    $customer_message .= "🙏 Thank you for shopping with *Auraloom*";
-
-    // 5️⃣ Clear cart ONLY ONCE
-    unset($_SESSION['cart']);
-    unset($_SESSION['coupon']);
-
-    // 6️⃣ Normalize phone number (India)
-    $customer_phone = preg_replace('/\D/', '', $phone);
-    if (strlen($customer_phone) == 10) {
-        $customer_phone = "91" . $customer_phone;
-    }
-
-    // // 7️⃣ Redirect to CUSTOMER WhatsApp
-    // header("Location: https://wa.me/$customer_phone?text=" . urlencode($customer_message));
-    // exit();
-
-    $_SESSION['last_order_id'] = $order_id;
-    header("Location: order-success.php");
-    exit();
-
 }
-
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Checkout</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | AURALOOM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<style>
-    :root {
-        --bg-dark: #0f0d0b;
-        --bg-soft: #171411;
-        --text-main: #f3ede7;
-        --text-muted: #b9afa6;
-        --accent: #c46a3b;
-        --border-soft: rgba(255, 255, 255, 0.12);
-    }
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
 
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: 'Poppins', sans-serif;
-        background: var(--bg-dark);
-        color: var(--text-main);
-        line-height: 1.6;
-    }
-
-    h3,
-    h5 {
-        font-family: 'Playfair Display', serif;
-    }
-
-    .container {
-        max-width: 1100px;
-    }
-
-    .checkout-card {
-        background: var(--bg-soft);
-        border: 1px solid var(--border-soft);
-        border-radius: 12px;
-    }
-
-    .form-control,
-    textarea {
-        background: transparent;
-        border: 1px solid var(--border-soft);
-        color: var(--text-main);
-    }
-
-    .form-control::placeholder,
-    textarea::placeholder {
-        color: var(--text-muted);
-    }
-
-    .form-control:focus,
-    textarea:focus {
-        background: transparent;
-        color: var(--text-main);
-        border-color: var(--accent);
-        box-shadow: none;
-    }
-
-    .btn-dark {
-        background: var(--accent);
-        border: none;
-    }
-
-    .btn-dark:hover {
-        background: #a95a32;
-    }
-
-    .btn-outline-dark {
-        border-color: var(--border-soft);
-        color: var(--text-muted);
-    }
-
-    .btn-outline-dark:hover {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
-
-    .total {
-        font-size: 22px;
-        color: var(--accent);
-    }
-
-    .section-title {
-        font-size: 14px;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        color: var(--text-muted);
-        margin-bottom: 14px;
-    }
-
-    .input-label {
-        font-size: 12px;
-        color: var(--text-muted);
-        letter-spacing: 1px;
-        margin-bottom: 6px;
-    }
-
-    .qty-btn {
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        font-size: 18px;
-        line-height: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    @media (max-width: 768px) {
-        .order-summary {
-            position: static;
+    <style>
+        :root {
+            --bg-dark: #0f0d0b;
+            --bg-soft: #171411;
+            --card-bg: #1b1815;
+            --text-main: #f3ede7;
+            --text-muted: #b9afa6;
+            --accent: #c46a3b;
+            --accent-hover: #a85830;
+            --border-soft: rgba(255, 255, 255, 0.12);
         }
-    }
 
-    /* Typography levels */
-    .text-primary {
-        color: #f3ede7;
-        /* main readable */
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .text-secondary {
-        color: #cfc6be;
-        /* supporting */
-    }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
 
-    .text-muted-soft {
-        color: #9f948a;
-        /* muted but visible */
-    }
+        /* ================= HEADER ================= */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 80px;
+            z-index: 1000;
+            background: rgba(15, 13, 11, 0.85);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--border-soft);
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            padding: 0 80px;
+        }
 
-    /* Section headings */
-    .section-title,
-    .checkout-card h5 {
-        color: #e6ddd5;
-        letter-spacing: 1px;
-    }
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            letter-spacing: 2px;
+            color: var(--text-main);
+        }
 
-    /* Cart product name */
-    .cart-item-name {
-        color: #f3ede7;
-        font-weight: 500;
-    }
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 34px;
+        }
 
-    /* Cart price line */
-    .cart-item-price {
-        color: #bfb4aa;
-        font-size: 13px;
-    }
+        nav a {
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-decoration: none;
+            position: relative;
+            padding-bottom: 6px;
+        }
 
-    /* Quantity number */
-    .cart-qty {
-        color: #f3ede7;
-        font-weight: 500;
-    }
+        nav a:hover {
+            color: var(--text-main);
+        }
 
-    /* Subtotal text */
-    .order-summary p {
-        color: #cfc6be;
-    }
+        nav a::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 0%;
+            height: 1px;
+            background: var(--accent);
+            transition: 0.35s ease;
+        }
 
-    /* Total payable */
-    .total {
-        color: #c46a3b;
-        font-size: 24px;
-        font-weight: 600;
-    }
+        nav a:hover::after {
+            width: 100%;
+        }
 
-    .qty-btn {
-        color: #f3ede7 !important;
-        border-color: rgba(255, 255, 255, 0.25);
-    }
+        .back-cart-btn {
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid var(--accent);
+        }
 
-    .qty-btn:hover {
-        background: rgba(196, 106, 59, 0.15);
-        border-color: var(--accent);
-    }
+        /* ================= LAYOUT ================= */
+        .page-wrap {
+            padding-top: 140px;
+            padding-bottom: 100px;
+        }
 
-    .checkout-card {
-        box-shadow:
-            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-            0 10px 40px rgba(0, 0, 0, 0.6);
-    }
+        h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            margin-bottom: 40px;
+            color: var(--text-main);
+        }
 
-    /* ===== RECOMMENDED PRODUCTS ===== */
+        h5 {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
 
-    .recommend-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-        gap: 18px;
-    }
+        /* ================= FORM VISIBILITY FIXES ================= */
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 5px;
+        }
 
-    .recommend-card {
-        background: #1b1815;
-        border: 1px solid rgba(255, 255, 255, .12);
-        border-radius: 14px;
-        overflow: hidden;
-        transition: transform .25s ease, box-shadow .25s ease;
-    }
+        .form-control,
+        textarea {
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 1px solid var(--border-soft) !important;
+            border-radius: 0 !important;
+            color: var(--text-main) !important;
+            padding: 12px 0 !important;
+            font-size: 15px !important;
+            margin-bottom: 25px;
+        }
 
-    .recommend-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-    }
+        .form-control:focus,
+        textarea:focus {
+            box-shadow: none !important;
+            border-bottom-color: var(--accent) !important;
+        }
 
-    .recommend-card img {
-        width: 100%;
-        height: 160px;
-        object-fit: cover;
-    }
+        .form-control::placeholder {
+            color: #555;
+            font-size: 14px;
+        }
 
-    .recommend-info {
-        padding: 14px;
-    }
+        /* ================= SQUARE BUTTONS ================= */
+        .btn-brand-primary {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 16px;
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 500;
+            transition: 0.4s;
+            width: 100%;
+            border-radius: 0 !important;
+            /* Square Style */
+        }
 
-    .recommend-name {
-        font-size: 14px;
-        font-weight: 500;
-        color: #f3ede7;
-        margin-bottom: 4px;
-    }
+        .btn-brand-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            color: #fff;
+        }
 
-    .recommend-price {
-        font-size: 13px;
-        color: #c46a3b;
-        margin-bottom: 12px;
-    }
+        .btn-brand-outline {
+            border: 1px solid var(--border-soft);
+            color: var(--text-muted);
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 12px 24px;
+            background: transparent;
+            margin-bottom: 35px;
+            border-radius: 0 !important;
+            /* Square Style */
+            transition: 0.3s;
+        }
 
-    .recommend-actions {
-        display: flex;
-        gap: 10px;
-    }
+        .btn-brand-outline:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
 
-    .btn-view {
-        flex: 1;
-        text-align: center;
-        padding: 7px 0;
-        font-size: 12px;
-        border: 1px solid rgba(255, 255, 255, .25);
-        color: #cfc6be;
-        border-radius: 20px;
-        transition: .25s;
-    }
+        /* ================= SUMMARY CARD ================= */
+        .checkout-card {
+            background: var(--card-bg) !important;
+            border: 1px solid var(--border-soft) !important;
+            padding: 40px !important;
+            border-radius: 0 !important;
+            color: var(--text-main);
+        }
 
-    .btn-view:hover {
-        background: rgba(255, 255, 255, .06);
-        color: #fff;
-    }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 15px;
+            color: var(--text-main);
+        }
 
-    .btn-add {
-        flex: 1;
-        background: var(--accent);
-        border: none;
-        color: #fff;
-        font-size: 12px;
-        padding: 7px 0;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: .25s;
-    }
+        .summary-row .label {
+            color: var(--text-muted);
+        }
 
-    .btn-add:hover {
-        background: #a95a32;
-    }
-</style>
+        .total-row {
+            color: var(--accent) !important;
+            font-size: 24px !important;
+            font-weight: 500 !important;
+            border-top: 1px solid var(--border-soft);
+            padding-top: 20px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Playfair Display', serif;
+        }
+
+        @media (max-width: 900px) {
+            header {
+                padding: 0 30px;
+            }
+
+            nav {
+                display: none;
+            }
+
+            .page-wrap {
+                padding-top: 110px;
+            }
+
+            h3 {
+                font-size: 32px;
+            }
+        }
+
+        .checkout-items {
+            margin-top: 25px;
+        }
+
+        .checkout-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 18px;
+            font-size: 14px;
+        }
+
+        .item-name {
+            font-size: 14px;
+        }
+
+        .item-price {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--border-soft);
+        }
+
+        .qty-control button {
+            width: 26px;
+            height: 26px;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .qty-control span {
+            width: 28px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .item-total {
+            font-weight: 500;
+        }
+
+        .stock-warning {
+            background: rgba(255, 107, 107, 0.08);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stock-warning strong {
+            color: #ff6b6b;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        .stock-warning p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .stock-actions {
+            margin-top: 18px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-outline {
+            padding: 10px 22px;
+            border: 1px solid var(--border-soft);
+            color: var(--text-muted);
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            padding: 10px 22px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .item-remove {
+            margin-top: 6px;
+        }
+
+        .item-remove a {
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid transparent;
+            transition: 0.3s;
+        }
+
+        .item-remove a:hover {
+            color: #ff6b6b;
+            border-bottom-color: #ff6b6b;
+        }
+
+        .checkout-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .item-remove {
+            margin-top: 4px;
+        }
+
+        .item-remove a {
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid transparent;
+            transition: 0.3s;
+        }
+
+        .item-remove a:hover {
+            color: #ff6b6b;
+            border-bottom-color: #ff6b6b;
+        }
+    </style>
+</head>
 
 <body>
 
-    <div class="container mt-5">
-        <h3>Checkout</h3>
+    <header>
+        <div class="logo">AURALOOM</div>
+        <nav>
+            <a href="index.php">Home</a>
+            <a href="collection.php">Shop</a>
+            <a href="custom-order.php">Custom</a>
+            <a href="b2b.php">B2B</a>
+            <a href="about-us.php">About</a>
+        </nav>
+        <a href="cart.php" class="back-cart-btn">← Back to Cart</a>
+    </header>
 
-        <div class="row">
+    <div class="container page-wrap">
+        <h3>Shipping Details</h3>
 
+        <div class="row g-5">
             <div class="col-md-6">
-                <div class="card checkout-card p-4 mb-4">
-                    <h5 class="section-title">Customer Details</h5>
-                    <form method="POST">
-                        <label class="input-label">Full Name</label>
-                        <input type="text" name="name" class="form-control mb-3"
-                            value="<?= htmlspecialchars($user['name']) ?>" required>
+                <?php if ($stock_issue): ?>
+                    <div style="
+                        background:rgba(255,107,107,.08);
+                 border:1px solid rgba(255,107,107,.3);
+                     padding:22px;
+                     margin-bottom:30px;
+                ">
+                        <strong style="color:#ff6b6b; letter-spacing:1px;">
+                            Some items are no longer available
+                        </strong>
 
-                        <label class="input-label">Email</label>
-                        <input type="email" name="email" class="form-control mb-3"
-                            value="<?= htmlspecialchars($user['email']) ?>" required>
+                        <p style="font-size:13px; color:var(--text-muted); margin-top:6px;">
+                            <?= implode(', ', $stock_products) ?> exceeded available stock.
+                            Please update your cart or continue shopping.
+                        </p>
 
-                        <input type="text" name="phone" class="form-control mb-3"
-                            value="<?= htmlspecialchars($user['phone'] ?? '') ?>" required>
-                        <textarea name="address" class="form-control mb-3" placeholder="Full Address" rows="4" required
-                            autofocus></textarea>
-                        <small class="text-muted mb-2 d-block">
-                            Please enter complete address including landmark
-                        </small>
-
-                        <button type="button" onclick="getLocation()" class="btn btn-outline-dark mb-2">
-                            Use Current Location
-                        </button>
+                        <div style="margin-top:14px; display:flex; gap:12px; flex-wrap:wrap;">
+                            <a href="cart.php" class="btn-outline">Update Cart</a>
+                            <a href="collection.php" class="btn-primary">Add More Products</a>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
 
-                        <button type="submit" name="place_order" class="btn btn-dark w-100">
-                            Place Order
-                        </button>
+                <form method="POST">
+                    <label>Full Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="Your Name"
+                        value="<?= htmlspecialchars($prefill_name) ?>" required>
 
-                    </form>
-                </div>
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="email@example.com"
+                        value="<?= htmlspecialchars($prefill_email) ?>" required>
+
+                    <label>Contact Number</label>
+                    <input type="text" name="phone" class="form-control" placeholder="+91 XXXXX XXXXX"
+                        value="<?= htmlspecialchars($prefill_phone) ?>" required>
+
+                    <label>Shipping Address</label>
+                    <textarea name="address" class="form-control" placeholder="Street, City, Pincode..." rows="4"
+                        required></textarea>
+
+                    <button type="button" onclick="getLocation()" class="btn btn-brand-outline">
+                        📍 Detect Current Location
+                    </button>
+
+                    <button type="submit" name="place_order" class="btn btn-brand-primary">
+                        Complete Order
+                    </button>
+                </form>
             </div>
 
             <div class="col-md-6">
-                <div class="card checkout-card p-4 mb-4">
-                    <?php if (!empty($_SESSION['cart_error'])): ?>
-                        <div class="alert alert-warning">
-                            <?= htmlspecialchars($_SESSION['cart_error']) ?>
-                        </div>
-                        <?php unset($_SESSION['cart_error']); ?>
-                    <?php endif; ?>
+                <div class="card checkout-card">
+                    <h5>Order Summary</h5>
+                    <div class="checkout-items">
 
-                    <h5>Your Cart</h5>
-                    <hr>
+                        <?php foreach ($_SESSION['cart'] as $id => $qty):
+                            $p = mysqli_fetch_assoc(mysqli_query($conn, "SELECT name, price, stock FROM products WHERE id=$id"));
+                            if (!$p)
+                                continue;
+                            ?>
+                            <div class="checkout-item">
 
-                    <?php foreach ($_SESSION['cart'] as $id => $qty):
-                        $p = mysqli_fetch_assoc(mysqli_query($conn, "SELECT name, price, image FROM products WHERE id=$id"));
-                        if (!$p)
-                            continue;
-                        ?>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <div class="cart-item-name">
-                                    <?= htmlspecialchars($p['name']) ?>
+                                <!-- LEFT COLUMN -->
+                                <div class="item-info">
+                                    <div class="item-name">
+                                        <?= htmlspecialchars($p['name']) ?>
+                                    </div>
+
+                                    <div class="item-price">
+                                        ₹<?= number_format($p['price'], 2) ?>
+                                    </div>
+
+                                    <!-- REMOVE (same behavior as cart.php) -->
+                                    <div class="item-remove">
+                                        <a href="cart.php?remove=<?= $id ?>"
+                                            onclick="return confirm('Remove this item from cart?')">
+                                            Remove
+                                        </a>
+                                    </div>
                                 </div>
 
-                                <div class="cart-item-price">
-                                    ₹<?= number_format($p['price'], 2) ?> × <?= $qty ?>
-                                    =
+                                <!-- QTY -->
+                                <div class="qty-control">
+                                    <button type="button" onclick="updateQty(<?= $id ?>, -1, <?= $p['stock'] ?>)">−</button>
+                                    <span id="qty-<?= $id ?>"><?= $qty ?></span>
+                                    <button type="button" onclick="updateQty(<?= $id ?>, 1, <?= $p['stock'] ?>)">+</button>
+                                </div>
+                                <div class="stock-msg" id="stock-msg-<?= $id ?>"
+                                    style="display:none; font-size:11px; color:#ff6b6b; margin-top:6px;">
+                                </div>
+
+                                <!-- TOTAL -->
+                                <div class="item-total" id="item-total-<?= $id ?>">
                                     ₹<?= number_format($p['price'] * $qty, 2) ?>
                                 </div>
 
-
                             </div>
 
-                            <div class="d-flex align-items-center gap-2">
-                                <a href="update-cart.php?id=<?= $id ?>&action=dec"
-                                    class="btn btn-sm btn-outline-dark qty-btn">−</a>
-                                <span>
-                                    <?= $qty ?>
-                                </span>
-                                <a href="update-cart.php?id=<?= $id ?>&action=inc"
-                                    class="btn btn-sm btn-outline-dark qty-btn">+</a>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
 
-                    <a href="cart.php" class="btn btn-outline-dark w-100 mt-2">
-                        Edit Full Cart
-                    </a>
-                </div>
+                        <?php endforeach; ?>
 
-                <div class="card checkout-card p-4 shadow-sm">
-                    <h5>Order Summary</h5>
-                    <hr>
+                    </div>
 
-                    <p class="text-secondary">
-                        Subtotal
-                        <span style="float:right;">
-                            ₹<?= number_format($grand_total, 2) ?>
+                    <hr style="margin:25px 0; border-color:var(--border-soft)">
+                    <div class="summary-row mt-4">
+                        <span class="label">Subtotal</span>
+                        <span id="checkout-subtotal">₹<?= number_format($grand_total, 2) ?></span>
+                    </div>
+
+                    <div class="summary-row" id="discount-row"
+                        style="<?= $discount_amount > 0 ? 'display:flex;' : 'display:none;' ?>; color:#7dd87d;">
+                        <span class="label">
+                            Discount (<span id="discount-percent"><?= $discount_percent ?></span>% OFF)
                         </span>
+                        <span>− ₹<span id="discount-amount"><?= number_format($discount_amount, 2) ?></span></span>
+                    </div>
+
+
+
+                    <div class="summary-row">
+                        <span class="label">Shipping</span>
+                        <span style="color: #7dd87d;">Complimentary</span>
+                    </div>
+
+                    <div class="total-row">
+                        <span>Total Payable</span>
+                        <span id="checkout-total">₹<?= number_format($final_total, 2) ?></span>
+                    </div>
+
+                    <p
+                        style="font-size:11px; color:var(--text-muted); margin-top:40px; text-align:center; letter-spacing:1px; text-transform: uppercase;">
+                        Handcrafted in India · Secure Checkout
                     </p>
-
-
-                    <?php if ($discount > 0): ?>
-                        <p class="text-success">
-                            Discount − ₹<?= number_format($discount, 2) ?>
-                        </p>
-                    <?php endif; ?>
-
-                    <hr>
-                    <h5 class="total">
-                        Total Payable: ₹<?= number_format($final_total, 2) ?>
-                    </h5>
-                </div>
-
-
-            </div>
-            <div class="card checkout-card p-4 mt-4">
-                <h5 class="section-title">You may also like</h5>
-
-                <div class="recommend-grid">
-                    <?php
-                    $suggest = mysqli_query($conn, "
-      SELECT id, name, price, image
-      FROM products
-      WHERE status='active'
-      ORDER BY RAND()
-      LIMIT 3
-    ");
-                    ?>
-
-                    <?php while ($s = mysqli_fetch_assoc($suggest)): ?>
-                        <div class="recommend-card">
-
-                            <img src="uploads/<?= htmlspecialchars($s['image']) ?>"
-                                alt="<?= htmlspecialchars($s['name']) ?>">
-
-                            <div class="recommend-info">
-                                <div class="recommend-name">
-                                    <?= htmlspecialchars($s['name']) ?>
-                                </div>
-
-                                <div class="recommend-price">
-                                    ₹<?= number_format($s['price'], 2) ?>
-                                </div>
-
-                                <div class="recommend-actions">
-                                    <a href="product.php?id=<?= $s['id'] ?>" class="btn-view">
-                                        View
-                                    </a>
-
-                                    <form method="post" action="cart.php">
-                                        <input type="hidden" name="add_to_cart" value="1">
-                                        <input type="hidden" name="product_id" value="<?= $s['id'] ?>">
-                                        <input type="hidden" name="quantity" value="1">
-                                        <button type="submit" class="btn-add">
-                                            + Add
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-
-                        </div>
-                    <?php endwhile; ?>
                 </div>
             </div>
-
-
         </div>
     </div>
 
+    <script>
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition);
+            } else {
+                alert("Geolocation not supported.");
+            }
+        }
+
+        function showPosition(position) {
+            let lat = position.coords.latitude;
+            let lon = position.coords.longitude;
+
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    let address = data.display_name;
+                    if (confirm("Detected address:\n" + address + "\n\nUse this address?")) {
+                        document.querySelector("textarea[name='address']").value = address;
+                    }
+                })
+                .catch(error => {
+                    alert("Unable to fetch address automatically.");
+                });
+        }
+    </script>
 </body>
 <script>
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(showPosition);
-        } else {
-            alert("Geolocation not supported.");
+    function updateQty(productId, delta, maxStock) {
+
+        const qtySpan = document.getElementById('qty-' + productId);
+        const msgBox = document.getElementById('stock-msg-' + productId);
+
+        let currentQty = parseInt(qtySpan.innerText);
+        let newQty = currentQty + delta;
+
+        // reset message
+        msgBox.style.display = 'none';
+        msgBox.innerText = '';
+
+        // ❌ below 1 (do nothing)
+        if (newQty < 1) return;
+
+        // ❌ exceeds stock → show message
+        if (newQty > maxStock) {
+            msgBox.innerText = `Only ${maxStock} item(s) available in stock`;
+            msgBox.style.display = 'block';
+            return;
         }
-    }
 
-    function showPosition(position) {
-        let lat = position.coords.latitude;
-        let lon = position.coords.longitude;
-
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${lat}&lon=${lon}`)
-            .then(response => response.json())
+        // ✅ valid → call backend
+        fetch('cart.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `ajax_update=1&product_id=${productId}&quantity=${newQty}`
+        })
+            .then(res => res.json())
             .then(data => {
-                let address = data.display_name;
 
-                if (confirm("Is this your address?\n\n" + address)) {
-                    document.querySelector("textarea[name='address']").value = address;
+                if (data.status !== 'ok') return;
+
+                // Qty
+                qtySpan.innerText = newQty;
+
+                // Item total
+                document.getElementById('item-total-' + productId).innerText =
+                    '₹' + data.item_subtotal;
+
+                // Subtotal
+                document.getElementById('checkout-subtotal').innerText =
+                    '₹' + data.cart_subtotal;
+
+                // Discount
+                const discountRow = document.getElementById('discount-row');
+
+                if (parseFloat(data.discount) > 0) {
+                    discountRow.style.display = 'flex';
+                    document.getElementById('discount-amount').innerText = data.discount;
+                    document.getElementById('discount-percent').innerText = data.discount_pct;
+                } else {
+                    discountRow.style.display = 'none';
                 }
-            })
-            .catch(error => {
-                alert("Unable to fetch address.");
+
+                // Final total
+                document.getElementById('checkout-total').innerText =
+                    '₹' + data.final_total;
             });
     }
 </script>
-
-
 
 
 </html>

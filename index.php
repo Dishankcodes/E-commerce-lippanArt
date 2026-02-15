@@ -90,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400&display=swap"
     rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
     :root {
@@ -905,7 +906,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
   </section>
 
 
-
   <footer class="reveal">
     <div class="footer-grid">
       <div>
@@ -917,18 +917,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
         <a href="collection.php">Shop</a>
         <a href="custom-order.php">Custom Art</a>
         <a href="about-us.php">About Us</a>
-        <a href="logout.php"> Switch Acoount</a>
+        <a href="logout.php">Switch Account</a>
       </div>
       <div>
         <h4>Business</h4>
-        <a href="#">B2B Orders</a>
+        <a href="b2b.php">B2B Orders</a>
         <a href="#">Collaborations</a>
         <a href="#">Care Guide</a>
       </div>
       <div>
         <h4>Contact</h4>
-        <p>Email: hello@auraloom.in</p>
-        <p>WhatsApp: +91 XXXXX XXXXX</p>
+
+        <a href="mailto:hello@auraloom.in" style="">
+          <i class="bi bi-envelope"></i>
+          <span>Email</span>
+        </a>
+        <br>
+
+        <a href="https://wa.me/91XXXXXXXXXX" target="_blank" > 
+          <i class="bi bi-whatsapp"></i>
+          <span>WhatsApp</span>
+        </a>
+        <br>
+
+        <a href="https://www.instagram.com/_auraloom_art?igsh=bHk3eXM1bjBxc2g=" target="_blank">
+          <i class="bi bi-instagram"></i>
+          <span>Instagram</span>
+        </a>
       </div>
     </div>
 

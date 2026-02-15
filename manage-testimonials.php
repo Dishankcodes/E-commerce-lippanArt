@@ -35,224 +35,250 @@ $testimonials = mysqli_query($conn, "
 <html lang="en">
 
 <head>
-    <title>Manage Testimonials | Admin</title>
+    <title>Manage Testimonials | Auraloom</title>
 
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Poppins:wght@300;400;500&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
+        /* --- BRAND VARIABLES --- */
         :root {
             --bg-dark: #0f0d0b;
             --bg-soft: #171411;
-            --card-bg: #1b1815;
             --text-main: #f3ede7;
             --text-muted: #b9afa6;
             --accent: #c46a3b;
-            --border-soft: rgba(255, 255, 255, .12);
+            --accent-hover: #a85830;
+            --border-soft: rgba(255, 255, 255, 0.12);
+            
+            /* Status Colors */
             --success: #7dd87d;
             --warning: #ffb347;
             --danger: #ff6b6b;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* --- GLOBAL OVERRIDES --- */
         body {
-            font-family: 'Poppins', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-main);
+            background-color: var(--bg-dark) !important;
+            color: var(--text-main) !important;
+            font-family: 'Poppins', sans-serif !important;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 60px auto;
-            padding: 0 30px;
+        /* --- TYPOGRAPHY --- */
+        h3 {
+            font-family: 'Playfair Display', serif !important;
+            color: var(--text-main) !important;
+            margin: 0 !important;
         }
 
-        h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 36px;
-            margin-bottom: 30px;
-        }
-
-        /* ===== TABLE ===== */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--bg-soft);
-            border: 1px solid var(--border-soft);
-        }
-
-        th,
-        td {
-            padding: 16px;
+        /* --- HEADER --- */
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
             border-bottom: 1px solid var(--border-soft);
-            vertical-align: top;
+            padding-bottom: 20px;
         }
 
-        th {
-            font-size: 12px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            text-align: left;
-        }
-
-        tr:hover {
-            background: rgba(255, 255, 255, .02);
-        }
-
-        /* ===== STATUS BADGES ===== */
-        .status {
-            font-size: 11px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .approved {
-            background: rgba(125, 216, 125, .15);
-            color: var(--success);
-        }
-
-        .pending {
-            background: rgba(255, 179, 71, .15);
-            color: var(--warning);
-        }
-
-        /* ===== ACTION BUTTONS ===== */
-        .actions button {
-            padding: 6px 14px;
-            font-size: 11px;
-            letter-spacing: 1px;
-            border: 1px solid var(--border-soft);
-            background: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: .3s;
-            margin-right: 6px;
-        }
-
-        .actions .approve:hover {
-            background: rgba(125, 216, 125, .15);
-            border-color: var(--success);
-            color: var(--success);
-        }
-
-        .actions .reject:hover {
-            background: rgba(255, 107, 107, .15);
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        /* ===== EMPTY ===== */
-        .empty {
-            color: var(--text-muted);
-            font-size: 14px;
-            padding: 30px 0;
-        }
-
-        /* ===== BACK BTN ===== */
-        .btn {
-            display: inline-block;
-            margin-top: 30px;
-            padding: 10px 24px;
-            border: 1px solid var(--border-soft);
-            color: var(--text-muted);
+        .btn-back {
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 8px 20px;
             text-decoration: none;
-            transition: .3s;
-            font-size: 13px;
-            letter-spacing: 1px;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: 0.3s;
         }
 
-        .btn:hover {
-            background: var(--accent);
-            border-color: var(--accent);
+        .btn-back:hover {
+            background-color: var(--accent);
             color: #fff;
         }
 
-        /* ===== MOBILE ===== */
-        @media(max-width:900px) {
-
-            table,
-            thead,
-            tbody,
-            th,
-            td,
-            tr {
-                display: block;
-            }
-
-            th {
-                display: none;
-            }
-
-            td {
-                padding: 12px 0;
-            }
+        /* --- TABLE STYLING --- */
+        .table {
+            background-color: var(--bg-soft) !important;
+            border-color: var(--border-soft) !important;
+            color: var(--text-muted) !important;
+            margin-top: 10px !important;
+            vertical-align: middle;
         }
+
+        .table th {
+            background-color: rgba(255,255,255,0.05) !important;
+            color: var(--accent) !important;
+            font-family: 'Playfair Display', serif !important;
+            border-bottom: 1px solid var(--border-soft) !important;
+            font-weight: normal !important;
+            text-transform: uppercase !important;
+            font-size: 13px !important;
+            letter-spacing: 1px !important;
+            padding: 18px 15px !important;
+        }
+
+        .table td {
+            background-color: transparent !important;
+            border-color: var(--border-soft) !important;
+            color: var(--text-main) !important;
+            padding: 18px 15px !important;
+            vertical-align: top !important;
+            font-size: 14px !important;
+        }
+
+        .table tr:hover td {
+            background-color: rgba(255,255,255,0.02) !important;
+        }
+
+        /* --- STATUS BADGES --- */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .approved { 
+            background: rgba(125, 216, 125, 0.15); 
+            color: var(--success); 
+            border: 1px solid var(--success);
+        }
+
+        .pending { 
+            background: rgba(255, 179, 71, 0.15); 
+            color: var(--warning); 
+            border: 1px solid var(--warning);
+        }
+
+        /* --- ACTION BUTTONS --- */
+        .actions-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            background: transparent;
+            border: 1px solid;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-approve {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .btn-approve:hover {
+            background: var(--success);
+            color: #000;
+        }
+
+        .btn-reject {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        .btn-reject:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* --- TEXT UTILS --- */
+        .text-message {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+        .customer-name {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 15px;
+        }
+
     </style>
 </head>
 
 <body>
 
-    <div class="container">
+    <div class="container mt-5">
 
-        <h2>💬 Homepage Testimonials</h2>
+        <div class="header-flex">
+            <h3>Homepage Testimonials</h3>
+            <a href="dashboard.php" class="btn-back">← Back to Dashboard</a>
+        </div>
 
         <?php if (mysqli_num_rows($testimonials) == 0): ?>
-            <div class="empty">No testimonials found.</div>
+            <div class="text-center p-5" style="border: 1px solid var(--border-soft); color: var(--text-muted);">
+                No testimonials found.
+            </div>
         <?php else: ?>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Customer</th>
-                        <th>Message</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    <?php while ($t = mysqli_fetch_assoc($testimonials)): ?>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
                         <tr>
-                            <td><?= htmlspecialchars($t['customer_name']) ?></td>
-
-                            <td><?= nl2br(htmlspecialchars($t['message'])) ?></td>
-
-                            <td>
-                                <span class="status <?= $t['approved'] ? 'approved' : 'pending' ?>">
-                                    <?= $t['approved'] ? 'Approved' : 'Pending' ?>
-                                </span>
-                            </td>
-
-                            <td><?= date("M d, Y", strtotime($t['created_at'])) ?></td>
-
-                            <td class="actions">
-                                <form method="post">
-                                    <input type="hidden" name="testimonial_id" value="<?= $t['id'] ?>">
-                                    <button class="approve" name="action" value="approve">Approve</button>
-                                    <button class="reject" name="action" value="reject">Reject</button>
-                                </form>
-                            </td>
+                            <th width="20%">Customer</th>
+                            <th width="40%">Message</th>
+                            <th width="10%">Status</th>
+                            <th width="15%">Date</th>
+                            <th width="15%">Action</th>
                         </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+                    </thead>
+
+                    <tbody>
+                        <?php while ($t = mysqli_fetch_assoc($testimonials)): ?>
+                            <tr>
+                                <td>
+                                    <span class="customer-name"><?= htmlspecialchars($t['customer_name']) ?></span>
+                                </td>
+
+                                <td>
+                                    <div class="text-message">
+                                        "<?= nl2br(htmlspecialchars($t['message'])) ?>"
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="status-badge <?= $t['approved'] ? 'approved' : 'pending' ?>">
+                                        <?= $t['approved'] ? 'Approved' : 'Pending' ?>
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span style="font-size:12px; color:var(--text-muted);">
+                                        <?= date("M d, Y", strtotime($t['created_at'])) ?>
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <form method="post" class="actions-form">
+                                        <input type="hidden" name="testimonial_id" value="<?= $t['id'] ?>">
+                                        
+                                        <button class="btn-action btn-approve" name="action" value="approve" title="Approve">
+                                            Approve
+                                        </button>
+                                        
+                                        <button class="btn-action btn-reject" name="action" value="reject" title="Hide/Reject">
+                                            Reject
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
 
         <?php endif; ?>
-
-        <a href="dashboard.php" class="btn">← Back to Dashboard</a>
 
     </div>
 
 </body>
-
 </html>

@@ -68,6 +68,14 @@ if (isset($_POST['ajax_update'])) {
     $discount_amount = round(($cart_total * 5) / 100, 2);
     $final_total = $cart_total - $discount_amount;
   }
+  // 🔐 SAVE PRICING IN SESSION (THIS IS THE FIX)
+  $_SESSION['pricing'] = [
+    'subtotal' => $cart_total,
+    'discount_percent' => $discount_percent,
+    'discount_amount' => $discount_amount,
+    'final_total' => $final_total
+  ];
+
   echo json_encode([
     'status' => 'ok',
     'item_subtotal' => number_format($p['price'] * ($_SESSION['cart'][$id] ?? 0), 2),
@@ -113,9 +121,6 @@ foreach ($_SESSION['cart'] as $id => $qty) {
     $cart_count += $qty; // total quantity (real e-commerce)
   }
 }
-/* =============================
-   ADD TO CART (MISSING FIX)
-============================= */
 /* =============================
    ADD TO CART (FINAL STOCK-SAFE)
 ============================= */
@@ -172,6 +177,31 @@ if ($grand_total >= 5000) {
   $final_total = $grand_total - $discount_amount;
 }
 
+$_SESSION['pricing'] = [
+  'subtotal' => $grand_total,
+  'discount_percent' => $discount_percent,
+  'discount_amount' => $discount_amount,
+  'final_total' => $final_total
+];
+
+/* =============================
+   YOU MAY ALSO LIKE
+============================= */
+
+// Get product IDs already in cart
+$cart_ids = array_keys($_SESSION['cart']);
+$exclude = !empty($cart_ids) ? "AND id NOT IN (" . implode(',', $cart_ids) . ")" : "";
+
+// Fetch random active products
+$recommended = mysqli_query($conn, "
+  SELECT id, name, price, image
+  FROM products
+  WHERE status='active'
+  $exclude
+  ORDER BY RAND()
+  LIMIT 4
+");
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -182,29 +212,46 @@ if ($grand_total >= 5000) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Poppins:wght@300;400;500&display=swap"
     rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
+    /* ================= VARIABLES ================= */
     :root {
       --bg-dark: #0f0d0b;
       --bg-soft: #171411;
+      --card-bg: #1b1815;
       --text-main: #f3ede7;
       --text-muted: #b9afa6;
       --accent: #c46a3b;
-      --border-soft: rgba(255, 255, 255, .12);
+      --accent-hover: #a85830;
+      --border-soft: rgba(255, 255, 255, 0.12);
     }
 
+    /* ================= GLOBAL RESET ================= */
     * {
       margin: 0;
       padding: 0;
-      box-sizing: border-box
+      box-sizing: border-box;
     }
 
     body {
       font-family: 'Poppins', sans-serif;
       background: var(--bg-dark);
       color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+      transition: 0.3s;
+    }
+
+    button,
+    input {
+      font-family: inherit;
     }
 
     /* ================= HEADER ================= */
@@ -212,35 +259,40 @@ if ($grand_total >= 5000) {
       position: fixed;
       top: 0;
       width: 100%;
-      height: 72px;
+      height: 80px;
       z-index: 1000;
-      background: rgba(15, 13, 11, .85);
-      backdrop-filter: blur(10px);
+      background: rgba(15, 13, 11, 0.85);
+      backdrop-filter: blur(15px);
       border-bottom: 1px solid var(--border-soft);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 80px;
+      padding: 0 60px;
     }
 
     .logo {
       font-family: 'Playfair Display', serif;
       font-size: 28px;
+      letter-spacing: 2px;
+      color: var(--text-main);
     }
 
     nav {
       display: flex;
-      align-items: center;
+      gap: 40px;
     }
 
     nav a {
-      margin-left: 34px;
-      font-size: 13px;
-      letter-spacing: 1.5px;
+      font-size: 12px;
+      letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--text-muted);
       position: relative;
-      padding-bottom: 6px;
+      padding-bottom: 5px;
+    }
+
+    nav a:hover {
+      color: var(--text-main);
     }
 
     nav a::after {
@@ -248,31 +300,175 @@ if ($grand_total >= 5000) {
       position: absolute;
       left: 0;
       bottom: 0;
-      width: 0;
+      width: 0%;
       height: 1px;
       background: var(--accent);
-      transition: .4s;
+      transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     }
 
     nav a:hover::after {
-      width: 100%
-    }
-
-    nav a:hover {
-      color: var(--text-main)
+      width: 100%;
     }
 
     .header-btn {
-      padding: 10px 22px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
       background: var(--accent);
       color: #fff;
-      font-size: 13px;
+      padding: 10px 24px;
+      border: none;
+      transition: 0.3s;
     }
 
-    /* MOBILE NAV */
+    .header-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ================= PAGE LAYOUT ================= */
+    .page-title {
+      margin-top: 130px;
+      text-align: center;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border-soft);
+      margin-bottom: 60px;
+    }
+
+    .page-title h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .cart-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 60px 100px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    /* ================= CART ITEMS ================= */
+    .cart-item {
+      display: grid;
+      grid-template-columns: 100px 1fr auto;
+      gap: 25px;
+      padding: 25px 0;
+      border-bottom: 1px solid var(--border-soft);
+      align-items: center;
+    }
+
+    .cart-item:first-child {
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .cart-item img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border: 1px solid var(--border-soft);
+    }
+
+    .cart-item h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    /* ================= QUANTITY CONTROLS ================= */
+    .item-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .qty {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border-soft);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .qty button {
+      width: 35px;
+      height: 35px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.2s;
+    }
+
+    .qty button:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .qty input {
+      width: 40px;
+      height: 35px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      text-align: center;
+      font-size: 14px;
+    }
+
+    /* ================= ORDER SUMMARY ================= */
+    .summary {
+      background: var(--card-bg);
+      padding: 35px;
+      border: 1px solid var(--border-soft);
+      position: sticky;
+      top: 120px;
+    }
+
+    .summary h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      margin-bottom: 25px;
+      font-weight: 500;
+    }
+
+    .summary h3 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 18px;
+    }
+
+    /* Checkout & Update Buttons */
+    .checkout {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      margin-top: 25px;
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.3s;
+      text-align: center;
+      display: block;
+    }
+
+    .checkout:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ================= MOBILE RESPONSIVE ================= */
     .menu-toggle {
-      width: 32px;
-      height: 22px;
+      width: 30px;
+      height: 20px;
       display: none;
       flex-direction: column;
       justify-content: space-between;
@@ -280,119 +476,114 @@ if ($grand_total >= 5000) {
     }
 
     .menu-toggle span {
+      width: 100%;
       height: 2px;
       background: var(--text-main);
     }
 
-    @media(max-width:768px) {
-      .menu-toggle {
-        display: flex
+    @media(max-width:900px) {
+      header {
+        padding: 0 20px;
+        height: 70px;
       }
 
       nav {
-        position: fixed;
-        top: 72px;
-        left: 0;
-        width: 100%;
-        height: calc(100vh - 72px);
-        background: rgba(15, 13, 11, .97);
-        flex-direction: column;
-        justify-content: center;
-        transform: translateY(-120%);
-        transition: .6s;
-        text-decoration: none;
+        display: none;
       }
 
-      nav.active {
-        transform: translateY(0)
+      .menu-toggle {
+        display: flex;
       }
 
-      nav a {
-        margin: 14px 0;
-        font-size: 26px;
-        font-family: 'Playfair Display', serif;
-      }
-    }
-
-    /* ================= PAGE ================= */
-    .page-title {
-      margin-top: 120px;
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .cart-container {
-      max-width: 1300px;
-      margin: auto;
-      padding: 0 60px 80px;
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 60px;
-    }
-
-    .cart-item {
-      display: grid;
-      grid-template-columns: 100px 1fr 140px;
-      gap: 24px;
-      padding: 30px 0;
-      border-bottom: 1px solid var(--border-soft);
-      align-items: center;
-    }
-
-    .cart-item img {
-      width: 100%;
-      height: 100px;
-      object-fit: cover;
-    }
-
-    .item-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 10px;
-    }
-
-    .qty {
-      display: flex;
-      border: 1px solid var(--border-soft);
-    }
-
-    .qty input {
-      width: 40px;
-      background: none;
-      border: none;
-      color: #fff;
-      text-align: center;
-    }
-
-    .qty button {
-      width: 30px;
-      background: none;
-      border: none;
-      color: #fff;
-    }
-
-    .summary {
-      background: var(--bg-soft);
-      padding: 30px;
-      border: 1px solid var(--border-soft);
-      position: sticky;
-      top: 120px;
-    }
-
-    .checkout {
-      width: 100%;
-      padding: 14px;
-      background: var(--accent);
-      border: none;
-      color: #fff;
-      margin-top: 20px;
-    }
-
-    @media(max-width:900px) {
       .cart-container {
         grid-template-columns: 1fr;
-        padding: 0 20px
+        padding: 0 20px 60px;
+        gap: 40px;
+      }
+
+      .cart-item {
+        grid-template-columns: 80px 1fr;
+        position: relative;
+        align-items: start;
+      }
+    }
+
+
+    @media(max-width:900px) {
+      section {
+        padding: 0 20px !important;
+      }
+    }
+
+
+    .recommend-section {
+      max-width: 1400px;
+      margin: 80px auto 120px;
+      padding: 0 60px;
+    }
+
+    .recommend-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      margin-bottom: 30px;
+    }
+
+    /* 🔥 KEY FIX: ALWAYS 3 SLOTS */
+    .recommend-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+    }
+
+    /* CARD */
+    .recommend-card {
+      background: #171411;
+      border: 1px solid rgba(255, 255, 255, .12);
+      padding: 18px;
+      transition: 0.3s;
+    }
+
+    .recommend-card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      margin-bottom: 12px;
+    }
+
+    .recommend-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .recommend-card .price {
+      color: #c46a3b;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .recommend-card button {
+      width: 100%;
+      padding: 10px;
+      background: #c46a3b;
+      border: none;
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .recommend-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .recommend-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -423,8 +614,10 @@ if ($grand_total >= 5000) {
       Cart (<span id="cart-count"><?= $cartQty ?></span>)
     </a>
   </header>
+
   <?php if (!empty($_SESSION['cart_error'])): ?>
-    <div class="alert alert-warning">
+    <div
+      style="margin-top:100px; text-align:center; color:#ff6b6b; font-size:14px; background:rgba(255,107,107,0.1); padding:15px; border-bottom:1px solid rgba(255,107,107,0.2);">
       <?= htmlspecialchars($_SESSION['cart_error']) ?>
     </div>
     <?php unset($_SESSION['cart_error']); ?>
@@ -438,21 +631,12 @@ if ($grand_total >= 5000) {
 
     <?php if (empty($_SESSION['cart'])): ?>
 
-      <div style="text-align:center;color:var(--text-muted)">
-        <p>Your cart is empty.</p>
+      <div style="text-align:center; color:var(--text-muted); grid-column: 1 / -1; padding: 60px 0;">
+        <p style="font-size: 18px; margin-bottom: 20px;">Your cart is currently empty.</p>
         <div style="margin-bottom:30px;">
-          <a href="collection.php" style="
-    display:inline-block;
-    font-size:13px;
-    letter-spacing:1px;
-    text-transform:uppercase;
-    color:var(--text-muted);
-    border:1px solid var(--border-soft);
-    padding:10px 18px;
-    transition:.3s;
-  " onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text-main)'"
-            onmouseout="this.style.borderColor='var(--border-soft)';this.style.color='var(--text-muted)'">
-            ← Continue Shopping
+          <a href="collection.php" class="checkout"
+            style="display:inline-block; width:auto; padding: 12px 30px; text-decoration:none;">
+            Start Shopping
           </a>
         </div>
       </div>
@@ -477,12 +661,12 @@ if ($grand_total >= 5000) {
               <h3><?= htmlspecialchars($p['name']) ?></h3>
 
               <?php if ($p['stock'] <= 3): ?>
-                <div style="font-size:12px;color:#ffb347">
+                <div style="font-size:11px; color:#ffb347; margin-bottom:5px;">
                   Only <?= $p['stock'] ?> left in stock
                 </div>
               <?php endif; ?>
 
-              <div style="color:var(--accent)">
+              <div style="color:var(--accent); font-size:15px; font-weight:500;">
                 ₹<?= number_format($p['price'], 2) ?>
               </div>
             </div>
@@ -496,13 +680,14 @@ if ($grand_total >= 5000) {
                 <button type="button" onclick="changeQty(<?= $id ?>, 1, <?= $p['stock'] ?>)">+</button>
               </div>
 
-              <div class="qty-error" id="error-<?= $id ?>" style="display:none;font-size:11px;color:#ffb347;margin-top:6px">
+              <div class="qty-error" id="error-<?= $id ?>" style="display:none; font-size:10px; color:#ffb347;">
               </div>
 
-              <div id="subtotal-<?= $id ?>">
+              <div id="subtotal-<?= $id ?>" style="font-size:14px; color:var(--text-main); font-weight:500;">
                 ₹<?= number_format($p['price'] * $qty, 2) ?>
               </div>
-              <a href="?remove=<?= $id ?>" style="font-size:12px;color:var(--text-muted)">
+              <a href="?remove=<?= $id ?>"
+                style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted);">
                 Remove
               </a>
             </div>
@@ -511,7 +696,8 @@ if ($grand_total >= 5000) {
 
         <?php endforeach; ?>
 
-        <button class="checkout" name="update_cart">
+        <button type="submit" name="update_cart" class="checkout"
+          style="background:transparent; border:1px solid var(--border-soft); color:var(--text-muted); width:auto; padding:10px 20px; font-size:11px; margin-top:30px;">
           Update Cart
         </button>
 
@@ -522,51 +708,89 @@ if ($grand_total >= 5000) {
     <div class="summary">
       <h2>Order Summary</h2>
 
-      <p style="margin:10px 0;color:var(--text-muted)">Subtotal</p>
-      <h3 id="cart-subtotal">₹<?= number_format($grand_total, 2) ?></h3>
-
-      <div id="discount-box" style="<?= $discount_amount > 0 ? '' : 'display:none;' ?>">
-        <p style="margin-top:14px;color:#9fd3a9;font-size:13px">
-          🎉 Auto Offer Applied (<span id="discount-percent"><?= $discount_percent ?></span>% OFF)
-        </p>
-        <p style="color:var(--text-muted);font-size:13px">
-          Discount − ₹<span id="discount-amount"><?= number_format($discount_amount, 2) ?></span>
-        </p>
+      <div
+        style="display:flex; justify-content:space-between; margin-bottom:15px; font-size:14px; color:var(--text-muted);">
+        <span>Subtotal</span>
+        <h3 id="cart-subtotal" style="font-size:14px; color:var(--text-main);">₹<?= number_format($grand_total, 2) ?>
+        </h3>
       </div>
 
-      <hr style="margin:18px 0;border:0;border-top:1px solid var(--border-soft)">
+      <div id="discount-box" style="<?= $discount_amount > 0 ? '' : 'display:none;' ?>">
+        <div style="margin-top:10px; color:#7dd87d; font-size:13px;">
+          🎉 Offer Applied (<span id="discount-percent"><?= $discount_percent ?></span>% OFF)
+        </div>
+        <div
+          style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:13px; margin-top:5px;">
+          <span>Discount</span>
+          <span>− ₹<span id="discount-amount"><?= number_format($discount_amount, 2) ?></span></span>
+        </div>
+      </div>
 
-      <p style="color:var(--text-muted)">Total Payable</p>
-      <h2 id="cart-total" style="color:var(--accent)">
-        ₹<?= number_format($final_total, 2) ?>
-      </h2>
+      <hr style="margin:20px 0; border:0; border-top:1px solid var(--border-soft)">
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="color:var(--text-muted); font-size:14px;">Total Payable</span>
+        <h2 id="cart-total" style="color:var(--accent); margin:0; font-size:20px;">
+          ₹<?= number_format($final_total, 2) ?>
+        </h2>
+      </div>
 
       <?php if ($final_total > 0 && !empty($_SESSION['cart'])): ?>
-        <a href="checkout.php" class="checkout" style="display:block;text-align:center;text-decoration:none">
+        <a href="checkout.php" class="checkout" style="text-decoration:none;">
           Proceed to Checkout
         </a>
       <?php else: ?>
-        <button class="checkout" disabled style="opacity:.5;cursor:not-allowed">
+        <button class="checkout" disabled style="opacity:0.5; cursor:not-allowed;">
           Proceed to Checkout
         </button>
       <?php endif; ?>
 
+      <div style="margin-top:20px; text-align:center;">
+        <a href="collection.php"
+          style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">
+          Add more products
+        </a>
+      </div>
+
     </div>
 
-
-    <p style="margin-top:14px;text-align:center">
-      <a href="collection.php" style="font-size:12px;color:var(--text-muted)">
-        Add more products
-      </a>
-    </p>
-
   </div>
+  <?php if (mysqli_num_rows($recommended) > 0): ?>
+    <section class="recommend-section">
 
-  <script>
-    const toggle = document.getElementById("menuToggle");
-    const nav = document.getElementById("navMenu");
-    toggle.onclick = () => nav.classList.toggle("active");
-  </script>
+      <h2 class="recommend-title">You may also like</h2>
+
+      <div class="recommend-grid">
+
+        <?php while ($r = mysqli_fetch_assoc($recommended)): ?>
+          <div class="recommend-card">
+
+            <a href="product.php?id=<?= $r['id'] ?>">
+              <img src="uploads/<?= htmlspecialchars($r['image']) ?>" alt="<?= htmlspecialchars($r['name']) ?>">
+            </a>
+
+            <h3><?= htmlspecialchars($r['name']) ?></h3>
+
+            <div class="price">
+              ₹<?= number_format($r['price'], 2) ?>
+            </div>
+
+            <form method="post" action="cart.php">
+              <input type="hidden" name="product_id" value="<?= $r['id'] ?>">
+              <input type="hidden" name="quantity" value="1">
+              <button type="submit" name="add_to_cart">
+                <i class="bi bi-cart-plus"></i> Add to Cart
+              </button>
+            </form>
+
+          </div>
+        <?php endwhile; ?>
+
+      </div>
+    </section>
+  <?php endif; ?>
+
+
 
 </body>
 <script>
@@ -637,6 +861,11 @@ if ($grand_total >= 5000) {
       });
 
   }
+</script>
+<script>
+  const toggle = document.getElementById("menuToggle");
+  const nav = document.getElementById("navMenu");
+  toggle.onclick = () => nav.classList.toggle("active");
 </script>
 
 </html>

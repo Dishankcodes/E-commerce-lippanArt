@@ -3,13 +3,13 @@ session_start();
 include("db.php");
 
 /* LOGIN REQUIRED */
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['customer_id'])) {
   header("Location: login.php");
   exit();
 }
 
 $order_id = (int) ($_GET['id'] ?? 0);
-$user_id = (int) $_SESSION['user_id'];
+$user_id = (int) $_SESSION['customer_id'];
 
 if ($order_id <= 0) {
   header("Location: order-history.php");
@@ -76,9 +76,16 @@ exit();
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=<?php if ($o['order_status'] !== 'Pending'): ?>
-  <p class=" muted" style="margin-top:10px">
-    Cancellation is not available at this stage.
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+
+
+  <?php if ($o['order_status'] !== 'Pending'): ?>
+    <p class=" muted" style="margin-top:10px">
+      Cancellation is not available at this stage.
     </p>
 
     <a href="https://wa.me/<?= $WHATSAPP_NUMBER ?>?text=Hi, I want to discuss cancellation for order #<?= $o['id'] ?>."
@@ -87,11 +94,9 @@ exit();
     </a>
   <?php endif; ?>
   , initial-scale=1.0">
-  <title>Document</title>
-</head>
 
-<body>
+  <body>
 
-</body>
+  </body>
 
 </html>

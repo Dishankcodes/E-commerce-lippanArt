@@ -43,95 +43,189 @@ ORDER BY ca.updated_at DESC
 ");
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-  <title>Manage Carts | Admin</title>
+  <meta charset="UTF-8">
+  <title>Manage Carts | Auraloom Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+  
   <style>
+    /* --- BRAND VARIABLES --- */
+    :root {
+      --bg-dark: #0f0d0b;
+      --bg-soft: #171411;
+      --text-main: #f3ede7;
+      --text-muted: #b9afa6;
+      --accent: #c46a3b;
+      --accent-hover: #a85830;
+      --border-soft: rgba(255, 255, 255, 0.12);
+      --st-active: #7dd87d;
+      --st-abandoned: #ff6b6b;
+      --whatsapp: #25d366;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      background: #0f0d0b;
-      color: #f3ede7;
-      font-family: Poppins, sans-serif;
-      padding: 40px;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Poppins', sans-serif;
+      padding: 60px 80px;
+    }
+
+    /* --- HEADER --- */
+    .header-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+        border-bottom: 1px solid var(--border-soft);
+        padding-bottom: 20px;
     }
 
     h2 {
-      font-family: Playfair Display, serif;
-      margin-bottom: 20px
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      margin: 0;
     }
 
+    .btn-dash {
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        padding: 8px 22px;
+        text-decoration: none;
+        font-size: 13px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        transition: 0.3s;
+    }
+
+    .btn-dash:hover {
+        background-color: var(--accent);
+        color: #fff;
+    }
+
+    /* --- STATS CARDS --- */
     .stats {
       display: flex;
-      gap: 20px;
-      margin-bottom: 40px
+      gap: 25px;
+      margin-bottom: 50px;
     }
 
     .card {
-      background: #171411;
-      border: 1px solid rgba(255, 255, 255, .12);
-      padding: 20px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border-soft);
+      padding: 30px;
       flex: 1;
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent);
     }
 
     .card h4 {
-      font-size: 12px;
-      color: #b9afa6;
-      letter-spacing: 1px
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
     }
 
     .card h3 {
-      font-size: 36px;
-      color: #c46a3b
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      color: var(--accent);
+      margin: 0;
+      font-weight: 500;
     }
 
+    /* --- TABLE --- */
     table {
       width: 100%;
       border-collapse: collapse;
+      background: var(--bg-soft);
     }
 
-    th,
-    td {
-      padding: 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, .12);
+    th, td {
+      padding: 18px 15px;
+      border-bottom: 1px solid var(--border-soft);
       text-align: left;
     }
 
     th {
       font-size: 12px;
-      color: #b9afa6;
-      text-transform: uppercase
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'Playfair Display', serif;
+      background: rgba(255,255,255,0.03);
     }
 
+    td {
+      font-size: 14px;
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background-color: rgba(255,255,255,0.02);
+    }
+
+    /* --- STATUS BADGES --- */
     .status {
-      padding: 4px 10px;
-      font-size: 12px;
-      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      display: inline-block;
     }
 
     .active {
-      background: #7dd87d22;
-      color: #7dd87d
+      background: rgba(125, 216, 125, 0.15);
+      color: var(--st-active);
+      border: 1px solid var(--st-active);
     }
 
     .abandoned {
-      background: #ff6b6b22;
-      color: #ff6b6b
+      background: rgba(255, 107, 107, 0.15);
+      color: var(--st-abandoned);
+      border: 1px solid var(--st-abandoned);
     }
 
-    .btn {
-      padding: 6px 14px;
-      background: #25D366;
-      color: #fff;
+    /* --- WHATSAPP BUTTON --- */
+    .btn-wa {
+      padding: 8px 16px;
+      background: transparent;
+      color: var(--whatsapp);
+      border: 1px solid var(--whatsapp);
       text-decoration: none;
-      font-size: 12px;
-      border-radius: 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+      transition: 0.3s;
     }
+
+    .btn-wa:hover {
+      background: var(--whatsapp);
+      color: #000;
+    }
+
+    small { color: var(--text-muted); font-size: 12px; }
   </style>
 </head>
 
 <body>
 
-  <h2>Manage Carts</h2>
+  <div class="header-flex">
+    <h2>Manage Carts</h2>
+    <a href="dashboard.php" class="btn-dash">← Back to Dashboard</a>
+  </div>
 
   <div class="stats">
     <div class="card">
@@ -149,43 +243,44 @@ ORDER BY ca.updated_at DESC
   </div>
 
   <table>
-    <tr>
-      <th>Customer</th>
-      <th>Items</th>
-      <th>Cart Value</th>
-      <th>Last Active</th>
-      <th>Status</th>
-      <th>Contact</th>
-    </tr>
-
-    <?php while ($c = mysqli_fetch_assoc($carts)):
-      $days = (time() - strtotime($c['updated_at'])) / 86400;
-      $status = $days <= 1 ? 'active' : 'abandoned';
-      ?>
+    <thead>
       <tr>
-        <td>
-          <?= htmlspecialchars($c['name']) ?><br>
-          <small><?= htmlspecialchars($c['email']) ?></small>
-        </td>
-        <td><?= $c['total_items'] ?? 0 ?></td>
-        <td>₹<?= number_format($c['cart_value'] ?? 0) ?></td>
-        <td><?= date("d M Y", strtotime($c['updated_at'])) ?></td>
-        <td>
-          <span class="status <?= $status ?>">
-            <?= ucfirst($status) ?>
-          </span>
-        </td>
-        <td>
-          <a class="btn" href="https://wa.me/91<?= $c['phone'] ?>?text=Hi, you left items in your Auraloom cart."
-            target="_blank">
-            WhatsApp
-          </a>
-        </td>
+        <th>Customer</th>
+        <th>Items</th>
+        <th>Cart Value</th>
+        <th>Last Active</th>
+        <th>Status</th>
+        <th>Contact</th>
       </tr>
-    <?php endwhile; ?>
-
+    </thead>
+    <tbody>
+      <?php while ($c = mysqli_fetch_assoc($carts)):
+        $days = (time() - strtotime($c['updated_at'])) / 86400;
+        $status = $days <= 1 ? 'active' : 'abandoned';
+        ?>
+        <tr>
+          <td>
+            <strong><?= htmlspecialchars($c['name']) ?></strong><br>
+            <small><?= htmlspecialchars($c['email']) ?></small>
+          </td>
+          <td><?= $c['total_items'] ?? 0 ?> Items</td>
+          <td style="color:var(--accent); font-weight:500;">₹<?= number_format($c['cart_value'] ?? 0) ?></td>
+          <td><?= date("d M Y", strtotime($c['updated_at'])) ?></td>
+          <td>
+            <span class="status <?= $status ?>">
+              <?= ucfirst($status) ?>
+            </span>
+          </td>
+          <td>
+            <a class="btn-wa" href="https://wa.me/91<?= $c['phone'] ?>?text=Hi <?= htmlspecialchars($c['name']) ?>, we noticed you left items in your Auraloom cart. Is there anything we can help you with?"
+              target="_blank">
+              WhatsApp
+            </a>
+          </td>
+        </tr>
+      <?php endwhile; ?>
+    </tbody>
   </table>
 
 </body>
-
 </html>
