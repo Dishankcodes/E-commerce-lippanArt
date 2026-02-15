@@ -1,5 +1,7 @@
 <?php
+session_start();
 include("db.php");
+
 
 $topSellingQuery = mysqli_query($conn, "
   SELECT 
@@ -23,6 +25,56 @@ $feedbackQuery = mysqli_query($conn, "
   ORDER BY created_at DESC
   LIMIT 6
 ");
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
+
+  /* 🔐 LOGIN CHECK */
+  if (!isset($_SESSION['customer_id'])) {
+    header("Location: login.php?redirect=collection.php");
+    exit;
+  }
+
+
+  $product_id = (int) $_POST['product_id'];
+  $quantity = (int) $_POST['quantity'];
+
+  if ($product_id <= 0 || $quantity <= 0) {
+    header("Location: collection.php");
+    exit;
+  }
+
+  // Fetch product
+  $q = mysqli_query(
+    $conn,
+    "SELECT id, name, price, image 
+     FROM products 
+     WHERE id=$product_id AND status='active' 
+     LIMIT 1"
+  );
+
+  if (mysqli_num_rows($q) == 0) {
+    header("Location: collection.php");
+    exit;
+  }
+
+  $product = mysqli_fetch_assoc($q);
+
+  // Init cart
+  if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+  }
+
+  // Add / update cart (quantity-only cart)
+  if (!isset($_SESSION['cart'][$product_id])) {
+    $_SESSION['cart'][$product_id] = 0;
+  }
+
+  $_SESSION['cart'][$product_id] += $quantity;
+
+  header("Location: product.php?id=" . $product_id);
+  exit;
+}
+
 
 ?>
 
@@ -688,6 +740,38 @@ $feedbackQuery = mysqli_query($conn, "
         display: none;
       }
     }
+
+
+
+    /* ================= ADD TO CART ================= */
+
+    .add-cart-btn {
+      width: 100%;
+      padding: 14px 18px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .add-cart-btn:hover {
+      background: #a85830;
+      transform: translateY(-2px);
+    }
+
+    .add-cart-btn:active {
+      transform: scale(0.98);
+    }
+
+    .add-cart-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 
@@ -702,15 +786,30 @@ $feedbackQuery = mysqli_query($conn, "
 
 
     <nav>
-      <a href="product.php">Shop</a>
+      <a href="collection.php">Collection</a>
       <a href="custom-order.php">Custom</a>
-      <a href="">B2B</a>
+      <a href="b2b.php">B2B</a>
       <a href="about-us.php">About Us</a>
-      <a href="#">Contact</a>
+      <a href="order-history.php">Order History</a>
     </nav>
     <div class="header-actions">
       <a href="login.php" class="header-login">Login</a>
-      <a href="#" class="header-btn">Enquire Now</a>
+
+      <?php
+      $username = "Guest";
+      if (isset($_SESSION['customer_id'])) {
+        $cid = (int) $_SESSION['customer_id'];
+        $q = mysqli_query($conn, "SELECT name FROM customers WHERE id=$cid LIMIT 1");
+        if ($row = mysqli_fetch_assoc($q)) {
+          $username = explode(' ', $row['name'])[0];
+        }
+      }
+      ?>
+
+      <span class="header-btn">
+        Hello
+        <?= htmlspecialchars($username) ?>
+      </span>
     </div>
   </header>
 
@@ -724,7 +823,7 @@ $feedbackQuery = mysqli_query($conn, "
         </p>
         <div class="hero-buttons">
           <a href="collection.php" class="btn-primary">Explore Collection</a>
-          <a href="#" class="btn-outline">Bulk & B2B Orders</a>
+          <a href="enquire.php" class="btn-outline">Bulk & B2B Orders</a>
         </div>
       </div>
 
@@ -770,7 +869,7 @@ $feedbackQuery = mysqli_query($conn, "
         <div class="product-card">
 
           <!-- CLICKABLE IMAGE + TITLE -->
-          <a href="product-details.php?id=<?php echo $product['id']; ?>" class="product-link">
+          <a href="product.php?id=<?php echo $product['id']; ?>" class="product-link">
             <img src="uploads/<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>">
             <h4><?php echo $product['name']; ?></h4>
           </a>
@@ -778,7 +877,7 @@ $feedbackQuery = mysqli_query($conn, "
           <span class="price">₹<?php echo number_format($product['price'], 2); ?></span>
 
           <!-- ADD TO CART -->
-          <form action="add-to-cart.php" method="POST">
+          <form method="POST">
             <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
             <input type="hidden" name="quantity" value="1">
             <button type="submit" class="add-cart-btn">Add to Cart</button>
@@ -818,6 +917,7 @@ $feedbackQuery = mysqli_query($conn, "
         <a href="collection.php">Shop</a>
         <a href="custom-order.php">Custom Art</a>
         <a href="about-us.php">About Us</a>
+        <a href="logout.php"> Switch Acoount</a>
       </div>
       <div>
         <h4>Business</h4>

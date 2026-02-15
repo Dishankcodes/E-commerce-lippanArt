@@ -512,6 +512,12 @@ $total = mysqli_num_rows($products);
 
                 <a href="product.php?id=<?= $p['id'] ?>" class="add-btn">
                   View Artwork
+                  <?php if ($p['stock'] <= 0): ?>
+                    <div style="font-size:12px;color:#ff6b6b;margin:6px 0;">
+                      Out of stock
+                    </div>
+                  <?php endif; ?>
+
                 </a>
               </div>
 

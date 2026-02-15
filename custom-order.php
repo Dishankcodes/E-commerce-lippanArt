@@ -1,6 +1,28 @@
 <?php
 session_start();
 include("db.php");
+// ================= PREFILL USER DETAILS =================
+$prefill_name = '';
+$prefill_email = '';
+$prefill_phone = '';
+
+if (isset($_SESSION['customer_id'])) {
+  $uid = (int) $_SESSION['customer_id'];
+
+  $uRes = mysqli_query($conn, "
+    SELECT name, email, phone 
+    FROM customers 
+    WHERE id = $uid 
+    LIMIT 1
+  ");
+
+  if ($uRes && mysqli_num_rows($uRes) === 1) {
+    $u = mysqli_fetch_assoc($uRes);
+    $prefill_name = $u['name'];
+    $prefill_email = $u['email'];
+    $prefill_phone = $u['phone'];
+  }
+}
 
 $success = "";
 
@@ -354,27 +376,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       <div class="form-box">
         <h1>Custom Order Request</h1>
         <p>Tell us your vision. Our artisans will bring it to life.</p>
-        <?php if($success): ?>
-  <p style="color:#7CFFB2;margin-bottom:20px;">
-    <?= htmlspecialchars($success) ?>
-  </p>
-<?php endif; ?>
+        <?php if ($success): ?>
+          <p style="color:#7CFFB2;margin-bottom:20px;">
+            <?= htmlspecialchars($success) ?>
+          </p>
+        <?php endif; ?>
 
         <form method="post">
 
           <div class="input-group">
             <label>Your Name *</label>
-            <input type="text" name="name" required>
+            <input type="text" name="name" required value="<?= htmlspecialchars($prefill_name) ?>">
+
           </div>
 
           <div class="input-group">
             <label>Email *</label>
-            <input type="email" name="email" required>
+            <input type="email" name="email" required value="<?= htmlspecialchars($prefill_email) ?>">
+
           </div>
 
           <div class="input-group">
             <label>Phone *</label>
-            <input type="text" name="phone" required>
+            <input type="text" name="phone" required value="<?= htmlspecialchars($prefill_phone) ?>">
+
           </div>
 
           <div class="input-group">

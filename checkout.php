@@ -2,6 +2,17 @@
 session_start();
 include("db.php");
 
+if (!isset($_SESSION['customer_id'])) {
+    header("Location: login.php?redirect=checkout.php");
+    exit;
+}
+
+$customer_id = (int) $_SESSION['customer_id'];
+
+$user = mysqli_fetch_assoc(
+    mysqli_query($conn, "SELECT name, email, phone FROM customers WHERE id=$customer_id")
+);
+
 if (empty($_SESSION['cart'])) {
     header("Location: cart.php");
     exit();
@@ -42,9 +53,9 @@ if (isset($_POST['place_order'])) {
 
     // 1️⃣ Insert order
     mysqli_query($conn, "INSERT INTO orders 
-        (customer_name, customer_email, customer_phone, address, total_amount, discount_amount, final_amount)
-        VALUES
-        ('$name','$email','$phone','$address','$grand_total','$discount','$final_total')");
+(customer_id, customer_name, customer_email, customer_phone, address, total_amount, discount_amount, final_amount)
+VALUES
+('$customer_id','$name','$email','$phone','$address','$grand_total','$discount','$final_total')");
 
     $order_id = mysqli_insert_id($conn);
 
@@ -196,6 +207,188 @@ if (isset($_POST['place_order'])) {
         font-size: 22px;
         color: var(--accent);
     }
+
+    .section-title {
+        font-size: 14px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+    }
+
+    .input-label {
+        font-size: 12px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+    }
+
+    .qty-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        font-size: 18px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+        .order-summary {
+            position: static;
+        }
+    }
+
+    /* Typography levels */
+    .text-primary {
+        color: #f3ede7;
+        /* main readable */
+    }
+
+    .text-secondary {
+        color: #cfc6be;
+        /* supporting */
+    }
+
+    .text-muted-soft {
+        color: #9f948a;
+        /* muted but visible */
+    }
+
+    /* Section headings */
+    .section-title,
+    .checkout-card h5 {
+        color: #e6ddd5;
+        letter-spacing: 1px;
+    }
+
+    /* Cart product name */
+    .cart-item-name {
+        color: #f3ede7;
+        font-weight: 500;
+    }
+
+    /* Cart price line */
+    .cart-item-price {
+        color: #bfb4aa;
+        font-size: 13px;
+    }
+
+    /* Quantity number */
+    .cart-qty {
+        color: #f3ede7;
+        font-weight: 500;
+    }
+
+    /* Subtotal text */
+    .order-summary p {
+        color: #cfc6be;
+    }
+
+    /* Total payable */
+    .total {
+        color: #c46a3b;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .qty-btn {
+        color: #f3ede7 !important;
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .qty-btn:hover {
+        background: rgba(196, 106, 59, 0.15);
+        border-color: var(--accent);
+    }
+
+    .checkout-card {
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+            0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* ===== RECOMMENDED PRODUCTS ===== */
+
+    .recommend-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 18px;
+    }
+
+    .recommend-card {
+        background: #1b1815;
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 14px;
+        overflow: hidden;
+        transition: transform .25s ease, box-shadow .25s ease;
+    }
+
+    .recommend-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    }
+
+    .recommend-card img {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+    }
+
+    .recommend-info {
+        padding: 14px;
+    }
+
+    .recommend-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #f3ede7;
+        margin-bottom: 4px;
+    }
+
+    .recommend-price {
+        font-size: 13px;
+        color: #c46a3b;
+        margin-bottom: 12px;
+    }
+
+    .recommend-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-view {
+        flex: 1;
+        text-align: center;
+        padding: 7px 0;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, .25);
+        color: #cfc6be;
+        border-radius: 20px;
+        transition: .25s;
+    }
+
+    .btn-view:hover {
+        background: rgba(255, 255, 255, .06);
+        color: #fff;
+    }
+
+    .btn-add {
+        flex: 1;
+        background: var(--accent);
+        border: none;
+        color: #fff;
+        font-size: 12px;
+        padding: 7px 0;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: .25s;
+    }
+
+    .btn-add:hover {
+        background: #a95a32;
+    }
 </style>
 
 <body>
@@ -206,41 +399,102 @@ if (isset($_POST['place_order'])) {
         <div class="row">
 
             <div class="col-md-6">
+                <div class="card checkout-card p-4 mb-4">
+                    <h5 class="section-title">Customer Details</h5>
+                    <form method="POST">
+                        <label class="input-label">Full Name</label>
+                        <input type="text" name="name" class="form-control mb-3"
+                            value="<?= htmlspecialchars($user['name']) ?>" required>
 
-                <form method="POST">
+                        <label class="input-label">Email</label>
+                        <input type="email" name="email" class="form-control mb-3"
+                            value="<?= htmlspecialchars($user['email']) ?>" required>
 
-                    <input type="text" name="name" class="form-control mb-3" placeholder="Full Name" required>
+                        <input type="text" name="phone" class="form-control mb-3"
+                            value="<?= htmlspecialchars($user['phone'] ?? '') ?>" required>
+                        <textarea name="address" class="form-control mb-3" placeholder="Full Address" rows="4" required
+                            autofocus></textarea>
+                        <small class="text-muted mb-2 d-block">
+                            Please enter complete address including landmark
+                        </small>
 
-                    <input type="email" name="email" class="form-control mb-3" placeholder="Email Address" required>
-
-                    <input type="text" name="phone" class="form-control mb-3" placeholder="Phone Number" required>
-
-                    <textarea name="address" class="form-control mb-3" placeholder="Full Address" rows="4"
-                        required></textarea>
-                    <button type="button" onclick="getLocation()" class="btn btn-outline-dark mb-2">
-                        Use Current Location
-                    </button>
+                        <button type="button" onclick="getLocation()" class="btn btn-outline-dark mb-2">
+                            Use Current Location
+                        </button>
 
 
-                    <button type="submit" name="place_order" class="btn btn-dark w-100">
-                        Place Order
-                    </button>
+                        <button type="submit" name="place_order" class="btn btn-dark w-100">
+                            Place Order
+                        </button>
 
-                </form>
-
+                    </form>
+                </div>
             </div>
 
             <div class="col-md-6">
+                <div class="card checkout-card p-4 mb-4">
+                    <?php if (!empty($_SESSION['cart_error'])): ?>
+                        <div class="alert alert-warning">
+                            <?= htmlspecialchars($_SESSION['cart_error']) ?>
+                        </div>
+                        <?php unset($_SESSION['cart_error']); ?>
+                    <?php endif; ?>
+
+                    <h5>Your Cart</h5>
+                    <hr>
+
+                    <?php foreach ($_SESSION['cart'] as $id => $qty):
+                        $p = mysqli_fetch_assoc(mysqli_query($conn, "SELECT name, price, image FROM products WHERE id=$id"));
+                        if (!$p)
+                            continue;
+                        ?>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="cart-item-name">
+                                    <?= htmlspecialchars($p['name']) ?>
+                                </div>
+
+                                <div class="cart-item-price">
+                                    ₹<?= number_format($p['price'], 2) ?> × <?= $qty ?>
+                                    =
+                                    ₹<?= number_format($p['price'] * $qty, 2) ?>
+                                </div>
+
+
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="update-cart.php?id=<?= $id ?>&action=dec"
+                                    class="btn btn-sm btn-outline-dark qty-btn">−</a>
+                                <span>
+                                    <?= $qty ?>
+                                </span>
+                                <a href="update-cart.php?id=<?= $id ?>&action=inc"
+                                    class="btn btn-sm btn-outline-dark qty-btn">+</a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <a href="cart.php" class="btn btn-outline-dark w-100 mt-2">
+                        Edit Full Cart
+                    </a>
+                </div>
 
                 <div class="card checkout-card p-4 shadow-sm">
                     <h5>Order Summary</h5>
                     <hr>
 
-                    <p>Subtotal: ₹<?= number_format($grand_total, 2) ?></p>
+                    <p class="text-secondary">
+                        Subtotal
+                        <span style="float:right;">
+                            ₹<?= number_format($grand_total, 2) ?>
+                        </span>
+                    </p>
+
 
                     <?php if ($discount > 0): ?>
                         <p class="text-success">
-                            <?= $discount_label ?> − ₹<?= number_format($discount, 2) ?>
+                            Discount − ₹<?= number_format($discount, 2) ?>
                         </p>
                     <?php endif; ?>
 
@@ -250,7 +504,58 @@ if (isset($_POST['place_order'])) {
                     </h5>
                 </div>
 
+
             </div>
+            <div class="card checkout-card p-4 mt-4">
+                <h5 class="section-title">You may also like</h5>
+
+                <div class="recommend-grid">
+                    <?php
+                    $suggest = mysqli_query($conn, "
+      SELECT id, name, price, image
+      FROM products
+      WHERE status='active'
+      ORDER BY RAND()
+      LIMIT 3
+    ");
+                    ?>
+
+                    <?php while ($s = mysqli_fetch_assoc($suggest)): ?>
+                        <div class="recommend-card">
+
+                            <img src="uploads/<?= htmlspecialchars($s['image']) ?>"
+                                alt="<?= htmlspecialchars($s['name']) ?>">
+
+                            <div class="recommend-info">
+                                <div class="recommend-name">
+                                    <?= htmlspecialchars($s['name']) ?>
+                                </div>
+
+                                <div class="recommend-price">
+                                    ₹<?= number_format($s['price'], 2) ?>
+                                </div>
+
+                                <div class="recommend-actions">
+                                    <a href="product.php?id=<?= $s['id'] ?>" class="btn-view">
+                                        View
+                                    </a>
+
+                                    <form method="post" action="cart.php">
+                                        <input type="hidden" name="add_to_cart" value="1">
+                                        <input type="hidden" name="product_id" value="<?= $s['id'] ?>">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn-add">
+                                            + Add
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    <?php endwhile; ?>
+                </div>
+            </div>
+
 
         </div>
     </div>

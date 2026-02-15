@@ -11,27 +11,42 @@ $id = intval($_GET['id']);
 $query = "SELECT * FROM products WHERE id = $id AND status = 'active'";
 $result = mysqli_query($conn, $query);
 $product = mysqli_fetch_assoc($result);
+// ================= CART-AWARE STOCK =================
+$in_cart_qty = $_SESSION['cart'][$product['id']] ?? 0;
+$remaining_stock = max(0, $product['stock'] - $in_cart_qty);
+
 
 if (!$product) {
   die("Product not found");
 }
 
 /* ================= REVIEW PERMISSION LOGIC ================= */
-
 $canReview = false;
 $hasReviewed = false;
 $oid = null;
 
-if (isset($_SESSION['user_id'])) {
-  $uid = intval($_SESSION['user_id']);
+if (isset($_SESSION['customer_id'])) {
 
+  $uid = (int) $_SESSION['customer_id'];
+
+  // Get logged-in user's email
+  $uRes = mysqli_query($conn, "SELECT email FROM customers WHERE id=$uid LIMIT 1");
+
+  if ($uRes && mysqli_num_rows($uRes) === 1) {
+    $uRow = mysqli_fetch_assoc($uRes);
+    $userEmail = mysqli_real_escape_string($conn, $uRow['email']);
+  } else {
+    $userEmail = null;
+  }
+
+  // Check delivered order containing this product
   $check = mysqli_query($conn, "
     SELECT oi.order_id
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
     WHERE oi.product_id = {$product['id']}
-      AND o.user_id = $uid
-      AND o.status = 'delivered'
+      AND o.customer_email = '$userEmail'
+      AND o.order_status = 'Delivered'
     LIMIT 1
   ");
 
@@ -40,9 +55,9 @@ if (isset($_SESSION['user_id'])) {
     $row = mysqli_fetch_assoc($check);
     $oid = $row['order_id'];
 
+    // Check if already reviewed
     $revCheck = mysqli_query($conn, "
-      SELECT id
-      FROM product_reviews
+      SELECT id FROM product_reviews
       WHERE product_id = {$product['id']}
         AND user_id = $uid
         AND order_id = $oid
@@ -561,6 +576,83 @@ $rating = mysqli_fetch_assoc($rating_q);
       cursor: not-allowed;
       opacity: 0.6;
     }
+
+    /* ===== WRITE REVIEW (PRODUCT PAGE) ===== */
+
+    .review-write-card {
+      background: #1b1815;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 40px;
+    
+    }
+
+    .review-write-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .review-write-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .review-field {
+      margin-bottom: 18px;
+    }
+
+    .review-field label {
+      display: block;
+      font-size: 13px;
+      color: #bfb6ae;
+      margin-bottom: 6px;
+    }
+
+    .review-field select,
+    .review-field textarea {
+      width: 100%;
+      background: #0f0d0b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 12px 14px;
+      font-size: 14px;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+    }
+
+    .review-field textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .review-field select:focus,
+    .review-field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(196, 106, 59, 0.25);
+    }
+
+    .review-submit-btn {
+      margin-top: 10px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: 12px 26px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background .25s, transform .2s;
+    }
+
+    .review-submit-btn:hover {
+      background: #a95a32;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 
@@ -580,7 +672,11 @@ $rating = mysqli_fetch_assoc($rating_q);
       <a href="custom-order.php">Custom Orders</a>
       <a href="faq.html">FAQ</a>
     </nav>
-    <a href="cart.php" class="header-btn">Cart (0)</a>
+    <a href="cart.php" class="header-btn">
+      Cart (
+      <?= array_sum($_SESSION['cart'] ?? []) ?>)
+    </a>
+
   </header>
 
   <div class="breadcrumbs">
@@ -629,21 +725,18 @@ $rating = mysqli_fetch_assoc($rating_q);
       </div>
       <!-- stock -->
       <div class="review-summary">
-        <?php if ($product['stock'] <= 0): ?>
-          <span class="stock-badge out">
-            Out of Stock
-          </span>
+        <?php if ($remaining_stock <= 0): ?>
+          <span class="stock-badge out">Out of Stock</span>
 
-        <?php elseif ($product['stock'] <= 3): ?>
+        <?php elseif ($remaining_stock <= 3): ?>
           <span class="stock-badge low">
-            Only <?= $product['stock'] ?> left
+            Only <?= $remaining_stock ?> left
           </span>
 
         <?php else: ?>
-          <span class="stock-badge in">
-            In Stock
-          </span>
+          <span class="stock-badge in">In Stock</span>
         <?php endif; ?>
+
       </div>
 
 
@@ -665,6 +758,9 @@ $rating = mysqli_fetch_assoc($rating_q);
         This artwork is available in the size mentioned in the description.
         If you want to change the size, please contact us or explore similar products in our collection.
       </div>
+
+
+
       <form method="post" action="cart.php" onsubmit="return <?= $product['stock'] > 0 ? 'true' : 'false' ?>;">
 
         <!-- REQUIRED BY CART LOGIC -->
@@ -679,8 +775,8 @@ $rating = mysqli_fetch_assoc($rating_q);
             <button type="button" class="qty-btn" onclick="increaseQty()">+</button>
           </div>
 
-          <button type="submit" class="add-cart-btn" <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
-            <?= $product['stock'] <= 0
+          <button type="submit" class="add-cart-btn" <?= $remaining_stock <= 0 ? 'disabled' : '' ?>>
+            <?= $remaining_stock <= 0
               ? 'OUT OF STOCK'
               : 'ADD TO CART • ₹' . number_format($product['price'], 2) ?>
           </button>
@@ -744,7 +840,13 @@ $rating = mysqli_fetch_assoc($rating_q);
           </div>
 
           <div class="stars" style="font-size:12px; margin-bottom:10px;">
-            <?= str_repeat('<i class="fas fa-star"></i>', $rev['rating']) ?>
+            <?php
+            for ($i = 1; $i <= 5; $i++) {
+              echo $i <= $rev['rating']
+                ? '<i class="fas fa-star"></i>'
+                : '<i class="far fa-star"></i>';
+            }
+            ?>
           </div>
 
           <p style="font-size:14px; line-height:1.6;">
@@ -755,71 +857,47 @@ $rating = mysqli_fetch_assoc($rating_q);
       <?php endwhile; ?>
     </div>
 
-
     <?php if ($canReview && !$hasReviewed): ?>
-      <div class="review-card" style="margin-top:30px;">
+      <div class="review-write-card">
 
-        <div class="review-header">
-          <strong>Write a Review</strong>
-        </div>
+        <h3 class="review-write-title">Write a Review</h3>
+        <p class="review-write-subtitle">
+          Share your experience with this product
+        </p>
 
         <form method="post" action="submit-review.php">
 
           <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
-          <input type="hidden" name="order_id" value="<?= $orderIdForReview ?>">
+          <input type="hidden" name="order_id" value="<?= $oid ?>">
 
           <!-- RATING -->
-          <div style="margin-bottom:12px;">
-            <label style="font-size:13px; color:#aaa;">Your Rating</label><br>
-            <select name="rating" required style="
-                  background:#1b1815;
-                  color:#fff;
-                  border:1px solid rgba(255,255,255,.15);
-                  padding:8px;
-                  margin-top:6px;
-                ">
-              <option value="">Select</option>
-              <option value="5">★★★★★</option>
-              <option value="4">★★★★</option>
-              <option value="3">★★★</option>
-              <option value="2">★★</option>
-              <option value="1">★</option>
+          <div class="review-field">
+            <label>Your Rating</label>
+            <select name="rating" required>
+              <option value="">Select rating</option>
+              <option value="5">★★★★★ Excellent</option>
+              <option value="4">★★★★☆ Very Good</option>
+              <option value="3">★★★☆☆ Good</option>
+              <option value="2">★★☆☆☆ Fair</option>
+              <option value="1">★☆☆☆☆ Poor</option>
             </select>
           </div>
 
           <!-- REVIEW TEXT -->
-          <div style="margin-bottom:14px;">
-            <label style="font-size:13px; color:#aaa;">Your Feedback</label>
-            <textarea name="review_text" required placeholder="Share your experience…" style="
-                    width:100%;
-                    background:#1b1815;
-                    color:#fff;
-                    border:1px solid rgba(255,255,255,.15);
-                    padding:10px;
-                    min-height:100px;
-                    margin-top:6px;
-                  "></textarea>
+          <div class="review-field">
+            <label>Your Feedback</label>
+            <textarea name="review_text" required
+              placeholder="What did you like or dislike about this product?"></textarea>
           </div>
 
-          <button type="submit" style="
-                background:var(--accent);
-                border:none;
-                color:#fff;
-                padding:10px 18px;
-                font-size:13px;
-                cursor:pointer;
-              ">
+          <button type="submit" class="review-submit-btn">
             Submit Review
           </button>
 
         </form>
       </div>
-
-    <?php elseif ($hasReviewed): ?>
-      <p style="margin-top:20px; font-size:13px; color:#888;">
-        You have already reviewed this product.
-      </p>
     <?php endif; ?>
+
 
   </section>
 
@@ -891,7 +969,7 @@ $rating = mysqli_fetch_assoc($rating_q);
 
 </html>
 <script>
-  const maxStock = <?= (int) $product['stock'] ?>;
+  const maxStock = <?= (int) $remaining_stock ?>;
 
   function increaseQty() {
     let qtyVal = document.getElementById('qtyVal');

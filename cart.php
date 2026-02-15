@@ -2,6 +2,7 @@
 session_start();
 include("db.php");
 
+
 /* =============================
    CART INIT
 ============================= */
@@ -115,12 +116,15 @@ foreach ($_SESSION['cart'] as $id => $qty) {
 /* =============================
    ADD TO CART (MISSING FIX)
 ============================= */
+/* =============================
+   ADD TO CART (FINAL STOCK-SAFE)
+============================= */
 if (isset($_POST['add_to_cart'])) {
 
   $product_id = (int) $_POST['product_id'];
-  $quantity = (int) ($_POST['quantity'] ?? 1);
+  $add_qty = (int) ($_POST['quantity'] ?? 1);
 
-  // Fetch product & stock
+  // Fetch product stock
   $res = mysqli_query(
     $conn,
     "SELECT stock FROM products WHERE id='$product_id' AND status='active'"
@@ -128,24 +132,32 @@ if (isset($_POST['add_to_cart'])) {
 
   if ($p = mysqli_fetch_assoc($res)) {
 
-    // Clamp quantity to stock
-    if ($quantity > $p['stock']) {
-      $quantity = $p['stock'];
+    $stock = (int) $p['stock'];
+    $in_cart = $_SESSION['cart'][$product_id] ?? 0;
+    $remaining = $stock - $in_cart;
+
+    // ❌ No stock left
+    if ($remaining <= 0) {
+      $_SESSION['cart_error'] = "Only $stock item(s) available.";
+      header("Location: product.php?id=$product_id");
+      exit;
     }
 
-    if ($quantity > 0) {
-      // If already in cart → increase qty
-      if (isset($_SESSION['cart'][$product_id])) {
-        $_SESSION['cart'][$product_id] += $quantity;
-      } else {
-        $_SESSION['cart'][$product_id] = $quantity;
-      }
+    // Clamp add qty to remaining stock
+    if ($add_qty > $remaining) {
+      $add_qty = $remaining;
+      $_SESSION['cart_error'] = "Only $remaining item(s) available.";
     }
+
+    $_SESSION['cart'][$product_id] = $in_cart + $add_qty;
   }
 
   header("Location: cart.php");
   exit();
 }
+
+
+
 
 /* =============================
    AUTO OFFER / DISCOUNT RULE
@@ -411,6 +423,12 @@ if ($grand_total >= 5000) {
       Cart (<span id="cart-count"><?= $cartQty ?></span>)
     </a>
   </header>
+  <?php if (!empty($_SESSION['cart_error'])): ?>
+    <div class="alert alert-warning">
+      <?= htmlspecialchars($_SESSION['cart_error']) ?>
+    </div>
+    <?php unset($_SESSION['cart_error']); ?>
+  <?php endif; ?>
 
   <div class="page-title">
     <h1>Your Cart</h1>
@@ -527,11 +545,11 @@ if ($grand_total >= 5000) {
         <a href="checkout.php" class="checkout" style="display:block;text-align:center;text-decoration:none">
           Proceed to Checkout
         </a>
-            <?php else: ?>
+      <?php else: ?>
         <button class="checkout" disabled style="opacity:.5;cursor:not-allowed">
           Proceed to Checkout
         </button>
-            <?php endif; ?>
+      <?php endif; ?>
 
     </div>
 

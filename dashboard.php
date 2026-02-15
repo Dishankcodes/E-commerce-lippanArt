@@ -4,7 +4,7 @@ include("db.php");
 
 // --- Security Check ---
 if (!isset($_SESSION['admin_email'])) {
-    header("Location: login.php");
+    header("Location: admin_login.php");
     exit();
 }
 
@@ -60,6 +60,41 @@ $b2b_count = mysqli_fetch_assoc(
 $recent_b2b = mysqli_query(
     $conn,
     "SELECT * FROM b2b_enquiries ORDER BY id DESC LIMIT 5"
+);
+
+$recent_testimonials = mysqli_query(
+    $conn,
+    "SELECT 
+        id,
+        customer_name,
+        message,
+        approved,
+        created_at
+     FROM testimonials
+     ORDER BY created_at DESC
+     LIMIT 5"
+);
+// Total Revenue (exclude cancelled)
+$revenue = mysqli_fetch_assoc(
+    mysqli_query(
+        $conn,
+        "SELECT COALESCE(SUM(final_amount),0) AS total 
+         FROM orders 
+         WHERE order_status != 'Cancelled'"
+    )
+)['total'];
+// Top Selling Products
+$top_selling = mysqli_query(
+    $conn,
+    "SELECT 
+        p.id,
+        p.name,
+        SUM(oi.quantity) AS sold_qty
+     FROM order_items oi
+     JOIN products p ON oi.product_id = p.id
+     GROUP BY oi.product_id
+     ORDER BY sold_qty DESC
+     LIMIT 5"
 );
 
 ?>
@@ -297,6 +332,84 @@ $recent_b2b = mysqli_query(
                 font-size: 36px;
             }
         }
+
+        /* ================= ADMIN REDESIGN ENHANCEMENTS ================= */
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            margin: 50px 0 25px;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        /* Make Revenue & Orders pop */
+        .stat-card h5 {
+            opacity: .75;
+        }
+
+        .stat-card:nth-child(4),
+        .stat-card:nth-child(6) {
+            background:
+                linear-gradient(135deg,
+                    rgba(196, 106, 59, .18),
+                    rgba(27, 24, 21, .95));
+            border-color: rgba(196, 106, 59, .5);
+        }
+
+        /* KPI emphasis */
+        .stat-card:nth-child(4) h3,
+        .stat-card:nth-child(6) h3 {
+            font-size: 52px;
+        }
+
+        /* Content grid balance */
+        .content-grid {
+            align-items: start;
+        }
+
+        /* Panel polish */
+        .data-panel {
+            border-radius: 14px;
+            background:
+                linear-gradient(180deg,
+                    rgba(255, 255, 255, .02),
+                    rgba(0, 0, 0, .05));
+        }
+
+        /* Panel headers stick out */
+        .data-panel h4 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Item separation */
+        .data-item {
+            border-radius: 8px;
+        }
+
+        /* Highlight Top Selling */
+        .data-panel:nth-child(3) .data-item {
+            border-left: 3px solid var(--accent);
+        }
+
+        /* B2B status emphasis */
+        .data-panel:nth-last-child(2) .data-sub {
+            font-weight: 500;
+        }
+
+        /* Testimonials feel softer */
+        .data-panel:last-child {
+            background: rgba(255, 255, 255, .015);
+        }
+
+        /* Mobile admin comfort */
+        @media(max-width:900px) {
+            .section-title {
+                font-size: 22px;
+            }
+        }
     </style>
 </head>
 
@@ -306,12 +419,14 @@ $recent_b2b = mysqli_query(
         <div class="logo">
             Auraloom <span class="admin-badge">Admin</span>
         </div>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <a href="admin_login.php" class="logout-btn">Logout</a>
     </header>
 
     <div class="container">
         <h2 class="page-title">Dashboard Overview</h2>
 
+
+        <h3 class="section-title">Key Metrics</h3>
         <div class="stats-grid">
             <a href="manage_customers.php" class="stat-card">
                 <div>
@@ -349,6 +464,14 @@ $recent_b2b = mysqli_query(
                     </h3>
                 </div>
             </a>
+            <a href="manage_orders.php" class="stat-card">
+                <div>
+                    <h5>Revenue</h5>
+                    <h3>₹
+                        <?= number_format($revenue) ?>
+                    </h3>
+                </div>
+            </a>
 
 
             <a href="manage_carts.php" class="stat-card">
@@ -369,6 +492,7 @@ $recent_b2b = mysqli_query(
             </a>
 
         </div>
+        <h3 class="section-title">Operations & Activity</h3>
 
         <div class="content-grid">
 
@@ -402,6 +526,32 @@ $recent_b2b = mysqli_query(
             </div>
 
             <div class="data-panel">
+                <h4>Top Selling Products</h4>
+
+                <div class="data-list">
+                    <?php if (mysqli_num_rows($top_selling) == 0): ?>
+                        <p style="color:var(--text-muted);font-size:13px;">
+                            No sales yet
+                        </p>
+                    <?php else: ?>
+                        <?php while ($row = mysqli_fetch_assoc($top_selling)): ?>
+                            <div class="data-item">
+                                <div>
+                                    <span class="data-primary">
+                                        <?= htmlspecialchars($row['name']) ?>
+                                    </span>
+                                    <span class="data-sub">
+                                        Sold:
+                                        <?= $row['sold_qty'] ?> units
+                                    </span>
+                                </div>
+                            </div>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="data-panel">
                 <h4>Recent Custom Orders</h4>
 
                 <div class="data-list">
@@ -428,7 +578,13 @@ $recent_b2b = mysqli_query(
             </div>
 
             <div class="data-panel">
-                <h4>Recent Reviews</h4>
+                <h4>
+                    Recent Reviews
+                    <a href="manage-reviews.php" style="float:right;font-size:12px;color:var(--accent)">
+                        Manage →
+                    </a>
+                </h4>
+
 
                 <div class="data-list">
                     <?php while ($row = mysqli_fetch_assoc($recent_reviews)) { ?>
@@ -443,7 +599,17 @@ $recent_b2b = mysqli_query(
 
                                 <span class="data-sub">
                                     <?php echo $row['rating']; ?>★ •
-                                    <?php echo ucfirst($row['status']); ?> •
+                                    <span style="
+                                font-size:11px;
+                         padding:2px 6px;
+                     border-radius:4px;
+                             background: <?= $row['status'] == 'pending' ? '#ffb34722' : '#7dd87d22' ?>;
+                    color: <?= $row['status'] == 'pending' ? '#ffb347' : '#7dd87d' ?>;
+                                                        ">
+                                        <?= ucfirst($row['status']); ?>
+                                    </span>
+
+
                                     <?php echo date("M d", strtotime($row['created_at'])); ?>
                                 </span>
                             </div>
@@ -485,6 +651,49 @@ $recent_b2b = mysqli_query(
 
                         </div>
                     <?php } ?>
+                </div>
+            </div>
+            <div class="data-panel">
+                <h4>
+                    Recent Testimonials
+                    <a href="manage-testimonials.php" style="float:right;font-size:12px;color:var(--accent)">
+                        Manage →
+                    </a>
+                </h4>
+
+                <div class="data-list">
+                    <?php if (mysqli_num_rows($recent_testimonials) == 0): ?>
+                        <p style="color:var(--text-muted);font-size:13px;">
+                            No testimonials yet
+                        </p>
+                    <?php else: ?>
+                        <?php while ($row = mysqli_fetch_assoc($recent_testimonials)): ?>
+                            <div class="data-item">
+
+                                <div>
+                                    <span class="data-primary">
+                                        <?= htmlspecialchars($row['customer_name']) ?>
+                                    </span>
+
+                                    <span class="data-sub">
+                                        <?= substr(htmlspecialchars($row['message']), 0, 70) ?>…
+                                    </span>
+                                </div>
+
+                                <!-- STATUS BADGE -->
+                                <span style="
+                        font-size:11px;
+                        padding:3px 8px;
+                        border-radius:4px;
+                        background: <?= $row['approved'] ? '#7dd87d22' : '#ffb34722' ?>;
+                        color: <?= $row['approved'] ? '#7dd87d' : '#ffb347' ?>;
+                    ">
+                                    <?= $row['approved'] ? 'Approved' : 'Pending' ?>
+                                </span>
+
+                            </div>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 

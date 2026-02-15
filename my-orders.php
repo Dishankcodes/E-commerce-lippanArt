@@ -2,26 +2,41 @@
 session_start();
 include("db.php");
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['customer_id'])) {
   header("Location: login.php");
   exit();
 }
+$customer_id = (int) $_SESSION['customer_id'];
 
-$user_id = $_SESSION['user_id'];
 
-// Get customer email
-$user = mysqli_fetch_assoc(
-  mysqli_query($conn, "SELECT email FROM customers WHERE id='$user_id'")
+/* 📧 GET CUSTOMER EMAIL */
+$stmt = mysqli_prepare(
+  $conn,
+  "SELECT email FROM customers WHERE id = ? LIMIT 1"
 );
+mysqli_stmt_bind_param($stmt, "i", $customer_id);
+mysqli_stmt_execute($stmt);
+$userRes = mysqli_stmt_get_result($stmt);
+$user = mysqli_fetch_assoc($userRes);
+
+if (!$user) {
+  // Safety fallback
+  header("Location: logout.php");
+  exit();
+}
 
 $email = $user['email'];
 
-// Fetch orders
-$orders = mysqli_query($conn, "
-  SELECT * FROM orders 
-  WHERE customer_email='$email'
-  ORDER BY id DESC
-");
+/* 📦 FETCH ORDERS */
+$stmt = mysqli_prepare(
+  $conn,
+  "SELECT * FROM orders 
+   WHERE customer_email = ? 
+   ORDER BY id DESC"
+);
+mysqli_stmt_bind_param($stmt, "s", $email);
+mysqli_stmt_execute($stmt);
+$orders = mysqli_stmt_get_result($stmt);
 ?>
 
 <!DOCTYPE html>
@@ -70,18 +85,20 @@ $orders = mysqli_query($conn, "
   <div class="container">
     <h1>My Orders</h1>
 
-    <?php if (mysqli_num_rows($orders) == 0): ?>
-      <p>You haven’t placed any orders yet.</p>
+    <?php if (mysqli_num_rows($orders) === 0): ?>
+      <p class="muted">You haven’t placed any orders yet.</p>
     <?php endif; ?>
 
     <?php while ($o = mysqli_fetch_assoc($orders)): ?>
       <div class="card">
-        <p><strong>Order #<?= $o['id'] ?></strong></p>
-        <p>Status: <?= $o['tracking_status'] ?></p>
+        <p><strong>Order #<?= (int)$o['id'] ?></strong></p>
+        <p>Status: <?= htmlspecialchars($o['tracking_status']) ?></p>
         <p>Total: ₹<?= number_format($o['final_amount'], 2) ?></p>
         <p>Date: <?= date("d M Y", strtotime($o['created_at'])) ?></p>
 
-        <a href="track-order.php?id=<?= $o['id'] ?>" class="btn">View / Track</a>
+        <a href="track-order.php?id=<?= (int)$o['id'] ?>" class="btn">
+          View / Track
+        </a>
       </div>
     <?php endwhile; ?>
   </div>

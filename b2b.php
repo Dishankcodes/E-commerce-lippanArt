@@ -252,6 +252,49 @@ nav a.active{color:var(--text-main)}
 </header>
 
 <div class="page-wrap">
+<?php if (isset($_GET['success'])): ?>
+  <div style="
+    max-width:900px;
+    margin:0 auto 60px auto;
+    padding:22px 26px;
+    border:1px solid rgba(125,216,125,.35);
+    background:rgba(125,216,125,.12);
+    color:#7dd87d;
+    font-size:15px;
+    border-radius:14px;
+    line-height:1.6;
+  ">
+    ✅ <strong>Your B2B enquiry has been successfully submitted.</strong><br><br>
+
+    Our team has received your request and will contact you shortly with
+    pricing, timelines, and design options.
+
+    <div style="margin-top:18px">
+      <a href="https://wa.me/919876543210?text=Hi, I just submitted a B2B enquiry on Auraloom."
+         style="
+           display:inline-block;
+           padding:10px 22px;
+           background:#25D366;
+           color:#fff;
+           font-size:13px;
+           margin-right:12px;
+         ">
+        💬 WhatsApp Us
+      </a>
+
+      <a href="index.php"
+         style="
+           display:inline-block;
+           padding:10px 22px;
+           border:1px solid rgba(255,255,255,.25);
+           color:#f3ede7;
+           font-size:13px;
+         ">
+        Back to Home
+      </a>
+    </div>
+  </div>
+<?php endif; ?>
 
 <!-- HERO -->
 <section class="hero">

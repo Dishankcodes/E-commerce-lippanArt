@@ -4,8 +4,10 @@ include("db.php");
 
 $error = "";
 
-/* ===== AUTO LOGIN VIA REMEMBER ME ===== */
-if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
+/* =====================================================
+   AUTO LOGIN VIA REMEMBER ME
+===================================================== */
+if (!isset($_SESSION['customer_id']) && isset($_COOKIE['remember_token'])) {
 
   $token = $_COOKIE['remember_token'];
 
@@ -18,16 +20,18 @@ if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
   $user = mysqli_stmt_get_result($stmt)->fetch_assoc();
 
   if ($user) {
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['user_name'] = $user['name'];
-    $_SESSION['user_role'] = $user['role'];
+    $_SESSION['customer_id'] = $user['id'];
+    $_SESSION['customer_name'] = $user['name'];
+    $_SESSION['customer_role'] = $user['role'];
 
     header("Location: collection.php");
     exit;
   }
 }
 
-/* ===== NORMAL CUSTOMER LOGIN ===== */
+/* =====================================================
+   NORMAL CUSTOMER LOGIN
+===================================================== */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   $email = strtolower(trim($_POST['email']));
@@ -36,45 +40,61 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   $stmt = mysqli_prepare(
     $conn,
-    "SELECT id, name, password, role FROM customers WHERE email=? LIMIT 1"
+    "SELECT id, name, password, role, login_type 
+         FROM customers 
+         WHERE email=? 
+         LIMIT 1"
   );
   mysqli_stmt_bind_param($stmt, "s", $email);
   mysqli_stmt_execute($stmt);
   $user = mysqli_stmt_get_result($stmt)->fetch_assoc();
 
-  if ($user && password_verify($password, $user['password'])) {
+  if ($user) {
 
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['user_name'] = $user['name'];
-    $_SESSION['user_role'] = $user['role'];
-
-    /* REMEMBER ME */
-    if ($remember) {
-      $token = bin2hex(random_bytes(32));
-
-      setcookie(
-        "remember_token",
-        $token,
-        time() + (86400 * 30), // 30 days
-        "/",
-        "",
-        false,
-        true
-      );
-
-      $u = mysqli_prepare(
-        $conn,
-        "UPDATE customers SET remember_token=? WHERE id=?"
-      );
-      mysqli_stmt_bind_param($u, "si", $token, $user['id']);
-      mysqli_stmt_execute($u);
+    /* 🚫 Google users cannot login via password */
+    if ($user['login_type'] === 'google') {
+      $error = "Please sign in using Google";
     }
 
-    header("Location: collection.php");
-    exit;
-  }
+    /* ✅ Manual user password check */ elseif (password_verify($password, $user['password'])) {
 
-  $error = "Invalid email or password";
+      $_SESSION['customer_id'] = $user['id'];
+      $_SESSION['customer_name'] = $user['name'];
+      $_SESSION['customer_role'] = $user['role'];
+
+      /* ===== REMEMBER ME ===== */
+      if ($remember) {
+        $token = bin2hex(random_bytes(32));
+
+        setcookie(
+          "remember_token",
+          $token,
+          [
+            "expires" => time() + (86400 * 30), // 30 days
+            "path" => "/",
+            "secure" => isset($_SERVER['HTTPS']),
+            "httponly" => true,
+            "samesite" => "Lax"
+          ]
+        );
+
+        $u = mysqli_prepare(
+          $conn,
+          "UPDATE customers SET remember_token=? WHERE id=?"
+        );
+        mysqli_stmt_bind_param($u, "si", $token, $user['id']);
+        mysqli_stmt_execute($u);
+      }
+
+      header("Location: collection.php");
+      exit;
+    } else {
+      $error = "Invalid email or password";
+    }
+
+  } else {
+    $error = "Invalid email or password";
+  }
 }
 ?>
 
@@ -370,6 +390,85 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       height: 1px;
       background: var(--border-soft);
     }
+
+
+
+    /* Google Login Button */
+    .google-btn {
+      margin-top: 18px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+
+      padding: 14px 16px;
+      border-radius: 6px;
+
+      background: #0f0f0f;
+      /* dark background */
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: all 0.25s ease;
+    }
+
+    /* Google icon */
+    .google-btn img {
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      padding: 3px;
+      border-radius: 50%;
+    }
+
+    /* Hover effect */
+    .google-btn:hover {
+      background: #c8703f;
+      /* same copper tone as Sign In */
+      color: #ffffff;
+      border-color: #c8703f;
+      transform: translateY(-1px);
+    }
+
+    /* Active click */
+    .google-btn:active {
+      transform: scale(0.98);
+    }
+
+    .divider {
+      margin: 20px 0;
+      position: relative;
+      text-align: center;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .divider::before {
+      left: 0;
+    }
+
+    .divider::after {
+      right: 0;
+    }
+
+    .divider span {
+      background: #121212;
+      padding: 0 10px;
+      color: #aaa;
+      font-size: 12px;
+    }
   </style>
 </head>
 
@@ -422,7 +521,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <a href="#">Forgot Password?</a>
           </div>
 
+
           <button type="submit" class="submit-btn">Sign In</button>
+          <div class="divider">
+            <span>OR</span>
+          </div> <a href="google-login.php" class="google-btn">
+            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google">
+            Continue with Google
+          </a>
+
+
         </form>
 
         <div class="form-footer">
