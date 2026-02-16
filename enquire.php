@@ -291,7 +291,7 @@ if (isset($_SESSION['customer_id'])) {
       <a href="collection.php">Collections</a>
       <a href="custom-order.php">Custom</a>
       <a href="b2b.php" class="active">B2B</a>
-      <a href="contact.php">Contact</a>
+      <a href="contact_us.php">Contact</a>
     </nav>
   </header>
 

@@ -34,7 +34,9 @@ unset($_SESSION['last_order_id']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Confirmed | Auraloom</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
@@ -49,7 +51,11 @@ unset($_SESSION['last_order_id']);
             --border-soft: rgba(255, 255, 255, .12);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             background: var(--bg-dark);
@@ -102,9 +108,20 @@ unset($_SESSION['last_order_id']);
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(196, 106, 59, 0.4); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(196, 106, 59, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(196, 106, 59, 0); }
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(196, 106, 59, 0.4);
+            }
+
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 15px rgba(196, 106, 59, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(196, 106, 59, 0);
+            }
         }
 
         /* --- BUTTONS (Square consistent) --- */
@@ -189,12 +206,26 @@ unset($_SESSION['last_order_id']);
             border-color: var(--accent);
         }
 
-        hr { border: none; border-top: 1px solid var(--border-soft); margin: 35px 0; }
+        hr {
+            border: none;
+            border-top: 1px solid var(--border-soft);
+            margin: 35px 0;
+        }
 
         @media (max-width: 768px) {
-            .container { margin: 40px 20px; padding: 30px; }
-            h1 { font-size: 28px; }
-            .btn { width: 100%; margin: 10px 0; }
+            .container {
+                margin: 40px 20px;
+                padding: 30px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .btn {
+                width: 100%;
+                margin: 10px 0;
+            }
         }
     </style>
 </head>
@@ -208,13 +239,18 @@ unset($_SESSION['last_order_id']);
 
         <h1>Order Confirmed</h1>
         <p class="muted">
+            Check your inbox for the confirmation email with your invoice and tracking details.<br> 
             Thank you for choosing <strong>Auraloom</strong>.<br>
             Your handcrafted masterpiece is now in the making.
         </p>
 
         <div style="margin-top:30px; font-size:14px; letter-spacing: 0.5px;">
             <p>Invoice ID: <strong style="color:var(--text-main)">#AUR-<?= $order_id ?></strong></p>
-            <p>Status: <span style="color:#9fd3a9; font-weight:500; text-transform:uppercase; font-size:12px;"><?= $order['order_status'] ?></span></p>
+            <p>Status: <span style="color:#9fd3a9; font-weight:500; text-transform:uppercase; 
+                    font-size:12px;"><?= $order['order_status'] ?></span></p>
+            <p>Notification: <span style="color:#9fd3a9; font-weight:500;
+             text-transform:uppercase; font-size:12px;">
+                    You will receive an email when your order status changes.</span></p>
         </div>
 
         <hr>
@@ -228,7 +264,8 @@ unset($_SESSION['last_order_id']);
                 </div>
             <?php endwhile; ?>
 
-            <div style="margin-top:20px; padding-top:15px; border-top: 1px dashed var(--border-soft); display: flex; justify-content: space-between; font-weight: 500;">
+            <div
+                style="margin-top:20px; padding-top:15px; border-top: 1px dashed var(--border-soft); display: flex; justify-content: space-between; font-weight: 500;">
                 <span>Total Amount Paid:</span>
                 <span style="color:var(--accent)">₹<?= number_format($order['final_amount'], 2) ?></span>
             </div>
@@ -237,7 +274,7 @@ unset($_SESSION['last_order_id']);
         <div class="next-steps">
             <strong>What happens next?</strong>
             <p class="muted" style="font-size: 13px;">
-                Our artisans will begin preparing your order within <strong>24–48 hours</strong>. 
+                Our artisans will begin preparing your order within <strong>24–48 hours</strong>.
                 You will receive a notification once your artwork is dispatched with real-time tracking details.
             </p>
         </div>
@@ -254,14 +291,16 @@ unset($_SESSION['last_order_id']);
 
         <div style="margin-top: 40px;">
             <p class="muted" style="font-size: 13px;">Need assistance? We're available on WhatsApp.</p>
-            <a href="https://wa.me/<?= $WHATSAPP_NUMBER ?>?text=Hi, regarding my order #AUR-<?= $order_id ?>" class="btn btn-wa">
+            <a href="https://wa.me/<?= $WHATSAPP_NUMBER ?>?text=Hi, regarding my order #AUR-<?= $order_id ?>"
+                class="btn btn-wa">
                 <i class="fab fa-whatsapp"></i> Chat with Us
             </a>
         </div>
 
         <div class="testimonial-area">
             <h3>Share Your Experience</h3>
-            <p class="muted" style="margin-bottom: 25px;">Your feedback inspires our artisans to create even more magic.</p>
+            <p class="muted" style="margin-bottom: 25px;">Your feedback inspires our artisans to create even more magic.
+            </p>
 
             <form method="post" action="submit-testimonial.php">
                 <input type="hidden" name="order_id" value="<?= $order_id ?>">
@@ -273,4 +312,5 @@ unset($_SESSION['last_order_id']);
     </div>
 
 </body>
+
 </html>

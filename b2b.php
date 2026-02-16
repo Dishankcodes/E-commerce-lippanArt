@@ -376,7 +376,8 @@ include("db.php");
         <h3 style="font-family:'Playfair Display'; margin-bottom:10px;">Submission Successful</h3>
         <p style="font-size:14px; margin-bottom:20px;">Your B2B enquiry has been received. Our concierge team will reach
           out shortly.</p>
-        <a href="index.php" class="btn-primary-brand" style="padding: 10px 25px; font-size:11px;">Back to Home</a>
+          <p style="font-size:14px; margin-bottom:20px;">  Check your email for confirmation.</p>
+        <a href="order-history.php" class="btn-primary-brand" style="padding: 10px 25px; font-size:11px;">Order Details</a>
       </div>
     <?php endif; ?>
 

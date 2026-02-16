@@ -922,8 +922,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
       <div>
         <h4>Business</h4>
         <a href="b2b.php">B2B Orders</a>
-        <a href="#">Collaborations</a>
-        <a href="#">Care Guide</a>
+        <a href="https://wa.me/91XXXXXXXXXX">Collaborations</a>
+        <a href="contact_us.php">Contact Us</a>
+        <a href="faq.html">FAQs</a>
       </div>
       <div>
         <h4>Contact</h4>
@@ -932,13 +933,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
           <i class="bi bi-envelope"></i>
           <span>Email</span>
         </a>
-        <br>
+      
 
         <a href="https://wa.me/91XXXXXXXXXX" target="_blank" > 
           <i class="bi bi-whatsapp"></i>
           <span>WhatsApp</span>
         </a>
-        <br>
+        
 
         <a href="https://www.instagram.com/_auraloom_art?igsh=bHk3eXM1bjBxc2g=" target="_blank">
           <i class="bi bi-instagram"></i>

@@ -611,6 +611,7 @@ $recommended = mysqli_query($conn, "
       <?php
       $cartQty = array_sum($_SESSION['cart']);
       ?>
+      <i class="bi bi-cart"></i>
       Cart (<span id="cart-count"><?= $cartQty ?></span>)
     </a>
   </header>
@@ -624,7 +625,8 @@ $recommended = mysqli_query($conn, "
   <?php endif; ?>
 
   <div class="page-title">
-    <h1>Your Cart</h1>
+    <h1>Your Cart <i class="bi bi-cart"></i>
+    </h1>
   </div>
 
   <div class="cart-container">
@@ -632,7 +634,8 @@ $recommended = mysqli_query($conn, "
     <?php if (empty($_SESSION['cart'])): ?>
 
       <div style="text-align:center; color:var(--text-muted); grid-column: 1 / -1; padding: 60px 0;">
-        <p style="font-size: 18px; margin-bottom: 20px;">Your cart is currently empty.</p>
+        <p style="font-size: 18px; margin-bottom: 20px;">Your cart is currently empty. <i class="bi bi-cart"></i>
+        </p>
         <div style="margin-bottom:30px;">
           <a href="collection.php" class="checkout"
             style="display:inline-block; width:auto; padding: 12px 30px; text-decoration:none;">
@@ -748,7 +751,8 @@ $recommended = mysqli_query($conn, "
       <div style="margin-top:20px; text-align:center;">
         <a href="collection.php"
           style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">
-          Add more products
+          Add more products <i class="bi bi-cart"></i>
+
         </a>
       </div>
 

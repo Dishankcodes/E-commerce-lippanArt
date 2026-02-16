@@ -52,8 +52,6 @@ $custom_orders = mysqli_query($conn, "
 $hasOrders = mysqli_num_rows($orders) > 0;
 $hasB2B = mysqli_num_rows($b2b_orders) > 0;
 $hasCustom = mysqli_num_rows($custom_orders) > 0;
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -306,7 +304,7 @@ $hasCustom = mysqli_num_rows($custom_orders) > 0;
 
                         <strong>Order #<?= $o['id'] ?></strong><br>
                         <span class="status"><?= ucfirst($o['order_status']) ?></span>
-
+                        <p class="muted"> You will receive an email when your order status changes</p>
                         <p class="muted" style="margin-top:10px">
                             Placed on <?= date("d M Y", strtotime($o['created_at'])) ?>
                         </p>
@@ -491,20 +489,18 @@ $hasCustom = mysqli_num_rows($custom_orders) > 0;
                             <hr>
 
                             <p>
-                                Estimated Quantity:
-                                <strong>
-                                    <?= $b['quantity'] ?>
-                                </strong>
+                                Estimated Quantity:<strong><?= $b['quantity'] ?></strong>
                             </p>
 
                             <p class="muted">
-                                Status:
-                                <strong>
-                                    <?= ucfirst($b['status']) ?>
-                                </strong>
+                                Status:<strong><?= ucfirst($b['status']) ?></strong>
                             </p>
 
-                            <div style="margin-top:14px">
+                            <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+
+                                <a href="b2b-details.php?id=<?= $b['id'] ?>" class="btn secondary">
+                                    👁 View Details
+                                </a>
 
                                 <a href="https://wa.me/91<?= $b['phone'] ?>?text=Hi, regarding my B2B enquiry #<?= $b['id'] ?>"
                                     class="btn" style="background:#25D366">
@@ -512,10 +508,11 @@ $hasCustom = mysqli_num_rows($custom_orders) > 0;
                                 </a>
 
                                 <a href="enquire.php" class="btn secondary">
-                                    New B2B Enquiry
+                                    ➕ New B2B Enquiry
                                 </a>
 
                             </div>
+
 
                         </div>
 

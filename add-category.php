@@ -2,37 +2,60 @@
 session_start();
 include("db.php");
 
-if(!isset($_SESSION['admin_email'])){
+if (!isset($_SESSION['admin_email'])) {
     header("Location: admin_login.php");
     exit();
 }
 
-if(isset($_POST['add_category'])){
-    $category_name = $_POST['category_name'];
+if (isset($_POST['add_category'])) {
+    $category_name = trim($_POST['category_name']);
 
-    // Basic validation to prevent empty categories
-    if(!empty($category_name)){
-        $query = "INSERT INTO categories (category_name) VALUES ('$category_name')";
-        mysqli_query($conn, $query);
+    $check = mysqli_query($conn, "
+    SELECT id FROM categories 
+    WHERE category_name = '$category_name'
+");
+
+    if (mysqli_num_rows($check) > 0) {
+        $success = "Category already exists!";
+    } else {
+        mysqli_query($conn, "
+        INSERT INTO categories (category_name) 
+        VALUES ('$category_name')
+    ");
         $success = "Category Added Successfully!";
     }
 }
+
+
+
+$categories = mysqli_query($conn, "
+    SELECT category_name, status 
+    FROM categories 
+    ORDER BY created_at DESC
+"); 
+
 ?>
 
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Add Category | Auraloom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
 
     <style>
         /* --- BRAND VARIABLES (Dark Theme) --- */
         :root {
-            --bg-dark: #0f0d0b;      /* Page Background */
-            --bg-panel: #171411;     /* Card Background */
-            --bg-input: #0b0a09;     /* Input Background */
+            --bg-dark: #0f0d0b;
+            /* Page Background */
+            --bg-panel: #171411;
+            /* Card Background */
+            --bg-input: #0b0a09;
+            /* Input Background */
             --text-main: #f3ede7;
             --text-muted: #b9afa6;
             --accent: #c46a3b;
@@ -53,7 +76,7 @@ if(isset($_POST['add_category'])){
             background-color: var(--bg-panel) !important;
             border: 1px solid var(--border-soft) !important;
             border-radius: 0 !important;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
         }
 
         /* --- TYPOGRAPHY --- */
@@ -148,34 +171,99 @@ if(isset($_POST['add_category'])){
             margin-bottom: 20px;
             font-size: 14px;
         }
+
+        /* EXISTING CATEGORY LIST */
+        .category-list {
+            border-top: 1px solid var(--border-soft);
+        }
+
+        .category-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .category-name {
+            font-size: 14px;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        /* THEME STATUS BADGES */
+        .badge-theme-active {
+            background: rgba(196, 106, 59, 0.15);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 12px;
+            font-size: 11px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-theme-disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid var(--border-soft);
+            padding: 5px 12px;
+            font-size: 11px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="container mt-5">
-    <div class="col-md-6 mx-auto">
-        
-        <div class="card p-4 shadow">
-            
-            <div class="card-header-flex">
-                <h4>Add Category</h4>
-                <a href="manage_categories.php" class="btn-back">← Back to List</a>
+    <div class="container mt-5">
+        <div class="col-md-6 mx-auto">
+
+            <div class="card p-4 shadow">
+
+                <div class="card-header-flex">
+                    <h4>Add Category</h4>
+                    <a href="manage_categories.php" class="btn-back">← Back to List</a>
+                </div>
+
+                <?php if (isset($success))
+                    echo "<div class='alert-custom'>$success</div>"; ?>
+
+                <form method="POST">
+
+                    <label>Category Name</label>
+                    <input type="text" name="category_name" class="form-control mb-4" placeholder="e.g. Wall Decor"
+                        required>
+
+                    <button type="submit" name="add_category" class="btn-brand">ADD CATEGORY</button>
+
+                </form>
+            </div>
+            <hr style="border-color: var(--border-soft); margin: 35px 0;">
+
+            <h6 class="mb-3" style="letter-spacing:1px; color: var(--text-muted); text-transform: uppercase;">
+                Existing Categories
+            </h6>
+
+            <div class="category-list">
+                <?php while ($cat = mysqli_fetch_assoc($categories)) { ?>
+                    <div class="category-row">
+                        <span class="category-name">
+                            <?php echo htmlspecialchars($cat['category_name']); ?>
+                        </span>
+
+                        <?php if ($cat['status'] === 'active') { ?>
+                            <span class="badge badge-theme-active">Active</span>
+                        <?php } else { ?>
+                            <span class="badge badge-theme-disabled">Disabled</span>
+                        <?php } ?>
+                    </div>
+                <?php } ?>
             </div>
 
-            <?php if(isset($success)) echo "<div class='alert-custom'>$success</div>"; ?>
-
-            <form method="POST">
-                
-                <label>Category Name</label>
-                <input type="text" name="category_name" class="form-control mb-4" placeholder="e.g. Wall Decor" required>
-                
-                <button type="submit" name="add_category" class="btn-brand">ADD CATEGORY</button>
-            
-            </form>
         </div>
-
     </div>
-</div>
 
 </body>
+
 </html>

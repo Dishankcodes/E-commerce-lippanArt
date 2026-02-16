@@ -1,6 +1,8 @@
 <?php
 session_start();
 include("db.php");
+date_default_timezone_set('Asia/Kolkata');
+require_once 'PHPMailer/mailer.php';
 
 /* =============================
    PREFILL CUSTOMER DETAILS
@@ -111,6 +113,11 @@ if (isset($_POST['place_order'])) {
 
         $order_id = mysqli_insert_id($conn);
 
+        // =============================
+// SEND EMAIL TO ALL ADMINS
+// =============================
+
+
         /* INSERT ORDER ITEMS + UPDATE STOCK */
         foreach ($_SESSION['cart'] as $id => $qty) {
 
@@ -129,6 +136,143 @@ if (isset($_POST['place_order'])) {
                 WHERE id = $id
             ");
         }
+        /* =============================
+           ADMIN EMAIL NOTIFICATION
+        ============================= */
+
+        // Fetch ordered items
+        $orderItems = [];
+        $resItems = mysqli_query($conn, "
+    SELECT p.name, oi.quantity, oi.price
+    FROM order_items oi
+    JOIN products p ON p.id = oi.product_id
+    WHERE oi.order_id = $order_id
+");
+
+        while ($row = mysqli_fetch_assoc($resItems)) {
+            $orderItems[] = $row;
+        }
+
+        // Build items table
+        $itemsHtml = '';
+        foreach ($orderItems as $item) {
+            $itemsHtml .= "
+    <tr>
+        <td style='padding:8px; border-bottom:1px solid #eee;'>
+            {$item['name']}
+        </td>
+        <td style='padding:8px; text-align:center; border-bottom:1px solid #eee;'>
+            {$item['quantity']}
+        </td>
+        <td style='padding:8px; text-align:right; border-bottom:1px solid #eee;'>
+            ₹" . number_format($item['price'], 2) . "
+        </td>
+    </tr>
+    ";
+        }
+
+        $orderDate = date("d M Y, h:i A");
+
+        // Email body
+        $emailBody = "
+<h2> New Order Received</h2>
+
+<p><b>Order ID:</b> #$order_id</p>
+<p><b>Customer:</b> $name</p>
+<p><b>Email:</b> $email</p>
+<p><b>Phone:</b> $phone</p>
+<p><b>Date:</b> $orderDate</p>
+<p><b>Shipping Address:</b><br>
+    <span style=\"white-space:pre-line;\">$address</span>
+</p>
+
+
+<table width='100%' cellpadding='0' cellspacing='0'
+       style='border-collapse:collapse; margin-top:15px;'>
+    <thead>
+        <tr>
+            <th align='left'>Product</th>
+            <th align='center'>Qty</th>
+            <th align='right'>Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        $itemsHtml
+    </tbody>
+</table>
+
+<p style='margin-top:15px; font-size:16px;'>
+    <b>Total Amount:</b> ₹" . number_format($final_total, 2) . "
+</p>
+";
+
+        // Send to all admins
+        $admins = mysqli_query($conn, "SELECT email FROM admins");
+        while ($a = mysqli_fetch_assoc($admins)) {
+            sendMail(
+                $a['email'],
+                "🛒 New Order Received (#$order_id)",
+                $emailBody
+            );
+        }
+
+
+
+        /* =============================
+CUSTOMER ORDER CONFIRMATION EMAIL
+============================= */
+
+        // Reuse items list (simpler for customer)
+        $customerItemsHtml = '';
+        foreach ($orderItems as $item) {
+            $customerItemsHtml .= "<li>{$item['name']} × {$item['quantity']}</li>";
+        }
+
+        $customerEmailBody = "
+<h2> Order Confirmed!</h2>
+
+<p>Hi <b>$name</b>,</p>
+
+<p>Thank you for shopping with <b>Auraloom</b>.  
+Your order has been placed successfully.</p>
+
+<p><b>Order ID:</b> #$order_id</p>
+<p><b>Order Date:</b> $orderDate</p>
+
+<h3>Items Ordered</h3>
+<ul>
+    $customerItemsHtml
+</ul>
+
+<p><b>Subtotal:</b> ₹" . number_format($grand_total, 2) . "</p>";
+
+        if ($discount_amount > 0) {
+            $customerEmailBody .= "<p><b>Discount:</b> − ₹" . number_format($discount_amount, 2) . "</p>";
+        }
+
+        $customerEmailBody .= "
+<p><b>Total Paid:</b> ₹" . number_format($final_total, 2) . "</p>
+
+<p><b>Shipping Address:</b><br>
+" . nl2br(htmlspecialchars($address)) . "</p>
+
+<p style='margin-top:20px;'>
+You will receive another email when your order status changes.
+</p>
+
+<p>
+Warm regards,<br>
+<b>Auraloom Team</b>
+</p>
+";
+
+        // ✅ Send confirmation to customer
+        sendMail(
+            $email,
+            "🧾 Order Confirmation – Auraloom (#$order_id)",
+            $customerEmailBody
+        );
+
 
         /* CLEAN SESSION */
         unset($_SESSION['cart']);
@@ -136,10 +280,14 @@ if (isset($_POST['place_order'])) {
 
         $_SESSION['last_order_id'] = $order_id;
 
+        // Redirect user immediately
         header("Location: order-success.php");
+        fastcgi_finish_request(); // <-- KEY LINE (non-blocking)
+
         exit();
     }
 }
+
 ?>
 
 <!DOCTYPE html>

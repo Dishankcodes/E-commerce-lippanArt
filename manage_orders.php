@@ -1,6 +1,8 @@
 <?php
 session_start();
 include("db.php");
+require_once "PHPMailer/mailer.php"; // adjust path if needed
+
 
 /* ===== ADMIN AUTH CHECK ===== */
 if (!isset($_SESSION['admin_email'])) {
@@ -10,15 +12,85 @@ if (!isset($_SESSION['admin_email'])) {
 
 /* ===== UPDATE ORDER STATUS ===== */
 if (isset($_POST['update_status'])) {
-    $order_id = (int) $_POST['order_id'];
-    $status = mysqli_real_escape_string($conn, $_POST['order_status']);
 
+    $order_id = (int) $_POST['order_id'];
+    $new_status = mysqli_real_escape_string($conn, $_POST['order_status']);
+
+    // 1️⃣ Update status
     mysqli_query($conn, "
         UPDATE orders
-        SET order_status = '$status'
+        SET order_status = '$new_status'
         WHERE id = $order_id
     ");
+
+    // 2️⃣ Fetch order + customer
+    $order = mysqli_fetch_assoc(mysqli_query($conn, "
+        SELECT *
+        FROM orders
+        WHERE id = $order_id
+        LIMIT 1
+    "));
+
+    if ($order) {
+
+        // 3️⃣ Fetch order items
+        $items_q = mysqli_query($conn, "
+            SELECT p.name, oi.quantity
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = $order_id
+        ");
+
+        $items_html = "";
+        while ($it = mysqli_fetch_assoc($items_q)) {
+            $items_html .= "<li>{$it['name']} × {$it['quantity']}</li>";
+        }
+
+        // 4️⃣ Fix timezone (IMPORTANT)
+        date_default_timezone_set("Asia/Kolkata");
+
+        $orderDate = date("d M Y, h:i A", strtotime($order['created_at']));
+
+        // 5️⃣ Email body
+        $emailBody = "
+        <h2>📦 Order Status Updated</h2>
+
+        <p>Hi <b>{$order['customer_name']}</b>,</p>
+
+        <p>Your order <b>#{$order_id}</b> status has been updated.</p>
+
+        <p><b>New Status:</b> <span style='color:#c46a3b;'><b>$new_status</b></span></p>
+
+        <hr>
+
+        <p><b>Order Details:</b></p>
+        <ul>
+            $items_html
+        </ul>
+
+        <p><b>Total Amount:</b> ₹" . number_format($order['final_amount'], 2) . "</p>
+
+        <p><b>Order Date:</b> $orderDate</p>
+
+        <p><b>Shipping Address:</b><br>
+            " . nl2br(htmlspecialchars($order['address'])) . "
+        </p>
+
+        <br>
+        <p>Thank you for shopping with <b>Auraloom</b> ✨</p>
+        ";
+
+        // 6️⃣ Send mail to customer
+        sendMail(
+            $order['customer_email'],
+            "📦 Order #$order_id Status Updated – $new_status",
+            $emailBody
+        );
+    }
+    header("Location: manage_orders.php?updated=1");
+    exit();
 }
+
 
 /* ===== FETCH ORDERS ===== */
 $orders = mysqli_query($conn, "
@@ -35,8 +107,10 @@ $orders = mysqli_query($conn, "
     <meta charset="UTF-8">
     <title>Manage Orders | Auraloom Admin</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             --bg-dark: #0f0d0b;
@@ -47,7 +121,7 @@ $orders = mysqli_query($conn, "
             --accent: #c46a3b;
             --accent-hover: #a85830;
             --border-soft: rgba(255, 255, 255, .12);
-            
+
             /* Status Colors from Old Page */
             --st-pending: #ffb347;
             --st-processing: #6cbcff;
@@ -56,7 +130,11 @@ $orders = mysqli_query($conn, "
             --st-cancelled: #ff6b6b;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -65,7 +143,11 @@ $orders = mysqli_query($conn, "
             line-height: 1.6;
         }
 
-        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: 0.3s;
+        }
 
         /* ================= HEADER (Consistent Glass-morphism) ================= */
         header {
@@ -165,11 +247,35 @@ $orders = mysqli_query($conn, "
             min-width: 100px;
         }
 
-        .Pending { color: var(--st-pending); background: rgba(255, 179, 71, 0.1); border: 1px solid var(--st-pending); }
-        .Processing { color: var(--st-processing); background: rgba(108, 188, 255, 0.1); border: 1px solid var(--st-processing); }
-        .Shipped { color: var(--st-shipped); background: rgba(165, 110, 255, 0.1); border: 1px solid var(--st-shipped); }
-        .Delivered { color: var(--st-delivered); background: rgba(125, 216, 125, 0.1); border: 1px solid var(--st-delivered); }
-        .Cancelled { color: var(--st-cancelled); background: rgba(255, 107, 107, 0.1); border: 1px solid var(--st-cancelled); }
+        .Pending {
+            color: var(--st-pending);
+            background: rgba(255, 179, 71, 0.1);
+            border: 1px solid var(--st-pending);
+        }
+
+        .Processing {
+            color: var(--st-processing);
+            background: rgba(108, 188, 255, 0.1);
+            border: 1px solid var(--st-processing);
+        }
+
+        .Shipped {
+            color: var(--st-shipped);
+            background: rgba(165, 110, 255, 0.1);
+            border: 1px solid var(--st-shipped);
+        }
+
+        .Delivered {
+            color: var(--st-delivered);
+            background: rgba(125, 216, 125, 0.1);
+            border: 1px solid var(--st-delivered);
+        }
+
+        .Cancelled {
+            color: var(--st-cancelled);
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--st-cancelled);
+        }
 
         /* ================= FORM ELEMENTS ================= */
         select {
@@ -222,7 +328,10 @@ $orders = mysqli_query($conn, "
                 grid-template-columns: 1fr 1fr;
                 gap: 15px;
             }
-            header { padding: 20px; }
+
+            header {
+                padding: 20px;
+            }
         }
     </style>
 </head>
@@ -230,11 +339,38 @@ $orders = mysqli_query($conn, "
 <body>
 
     <header>
-        <div class="logo">Auraloom <span style="font-size:12px; color:var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-left: 10px;">Admin Portal</span></div>
+        <div class="logo">Auraloom <span
+                style="font-size:12px; color:var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-left: 10px;">Admin
+                Portal</span></div>
         <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
     </header>
 
     <div class="container">
+        <?php if (isset($_GET['updated'])): ?>
+            <div id="successAlert" style="
+        background:rgba(125,216,125,.12);
+        border:1px solid rgba(125,216,125,.4);
+        padding:14px 18px;
+        margin-bottom:20px;
+        color:#7dd87d;
+        font-size:13px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    ">
+                <span><i class="bi bi-check-circle-fill"></i> Order status updated and email sent to customer.</span>
+
+                <button onclick="closeAlert()" style="
+            background:none;
+            border:none;
+            color:#7dd87d;
+            font-size:18px;
+            cursor:pointer;
+            line-height:1;
+        ">×</button>
+            </div>
+        <?php endif; ?>
+
 
         <h2>Order Management</h2>
 
@@ -258,11 +394,13 @@ $orders = mysqli_query($conn, "
                         </div>
 
                         <div class="muted">
-                            <i class="fas fa-phone-alt" style="margin-right: 5px;"></i> <?= htmlspecialchars($row['customer_phone']) ?>
+                            <i class="fas fa-phone-alt" style="margin-right: 5px;"></i>
+                            <?= htmlspecialchars($row['customer_phone']) ?>
                         </div>
 
                         <div>
-                            <span style="color: var(--accent); font-weight: 600;">₹<?= number_format($row['final_amount'], 2) ?></span>
+                            <span
+                                style="color: var(--accent); font-weight: 600;">₹<?= number_format($row['final_amount'], 2) ?></span>
                             <div>
                                 <a href="manage-order-details.php?id=<?= $row['id'] ?>" class="view-link">
                                     View Items →
@@ -299,6 +437,12 @@ $orders = mysqli_query($conn, "
         </div>
 
     </div>
+    <script>
+        function closeAlert() {
+            document.getElementById('successAlert').style.display = 'none';
+        }
+    </script>
 
 </body>
+
 </html>

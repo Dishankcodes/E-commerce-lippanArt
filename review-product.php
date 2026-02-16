@@ -2,12 +2,12 @@
 session_start();
 include("db.php");
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['customer_id'])) {
   header("Location: login.php");
   exit;
 }
 
-$user_id = (int) $_SESSION['user_id'];
+$user_id = (int) $_SESSION['customer_id'];
 $order_id = (int) ($_GET['order_id'] ?? 0);
 $product_id = (int) ($_GET['product_id'] ?? 0);
 
@@ -241,7 +241,7 @@ $product = mysqli_fetch_assoc(
       <a href="collection.php">Shop</a>
       <a href="custom-order.php">Custom</a>
       <a href="b2b.php">B2B</a>
-      <a href="contact.php">Contact</a>
+      <a href="contact_us.php">Contact</a>
     </nav>
     <a href="order-history.php" style="color: var(--accent); font-size: 13px; text-decoration: none; border-bottom: 1px solid var(--accent);">MY ORDERS</a>
   </header>

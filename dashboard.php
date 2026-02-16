@@ -107,7 +107,9 @@ $top_selling = mysqli_query(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Auraloom</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
@@ -122,7 +124,11 @@ $top_selling = mysqli_query(
             --sidebar-width: 260px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -131,7 +137,11 @@ $top_selling = mysqli_query(
             display: flex;
         }
 
-        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: 0.3s;
+        }
 
         /* --- SIDEBAR NAVIGATION (Restored) --- */
         .sidebar {
@@ -140,7 +150,8 @@ $top_selling = mysqli_query(
             background: var(--bg-soft);
             border-right: 1px solid var(--border-soft);
             position: fixed;
-            left: 0; top: 0;
+            left: 0;
+            top: 0;
             padding: 30px 0;
             display: flex;
             flex-direction: column;
@@ -179,7 +190,8 @@ $top_selling = mysqli_query(
             color: var(--accent);
         }
 
-        .sidebar-menu li a:hover, .sidebar-menu li a.active {
+        .sidebar-menu li a:hover,
+        .sidebar-menu li a.active {
             background: rgba(196, 106, 59, 0.1);
             color: var(--text-main);
             border-left: 4px solid var(--accent);
@@ -229,10 +241,14 @@ $top_selling = mysqli_query(
             border-radius: 4px;
             letter-spacing: 1px;
             text-transform: uppercase;
-           
+
         }
 
-        .logout-btn:hover { background: #ebd6c0; color: #fff; border-color: var(--accent); }
+        .logout-btn:hover {
+            background: #ebd6c0;
+            color: #fff;
+            border-color: var(--accent);
+        }
 
         /* --- CONTAINER & STAT CARDS --- */
         .container {
@@ -269,50 +285,135 @@ $top_selling = mysqli_query(
             transition: 0.3s;
         }
 
-        .stat-card:hover { border-color: var(--accent); transform: translateY(-5px); }
+        .stat-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-5px);
+        }
 
-        .stat-card h5 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 10px; opacity: 0.75; }
+        .stat-card h5 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            opacity: 0.75;
+        }
 
-        .stat-card h3 { font-family: 'Playfair Display', serif; font-size: 36px; color: var(--accent); }
+        .stat-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            color: var(--accent);
+        }
 
         /* KPI Emphasis for Revenue & Orders */
-        .stat-card:nth-child(4), .stat-card:nth-child(6) {
+        .stat-card:nth-child(4),
+        .stat-card:nth-child(6) {
             background: linear-gradient(135deg, rgba(196, 106, 59, .15), rgba(27, 24, 21, .95));
             border-color: rgba(196, 106, 59, .5);
         }
 
         /* --- DATA PANELS --- */
-        .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
 
-        .data-panel { 
-            background: var(--bg-soft); 
-            border: 1px solid var(--border-soft); 
-            padding: 30px; 
+        .data-panel {
+            background: var(--bg-soft);
+            border: 1px solid var(--border-soft);
+            padding: 30px;
             border-radius: 12px;
             background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(0, 0, 0, .05));
         }
 
-        .data-panel h4 { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px; }
+        .data-panel h4 {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-soft);
+            padding-bottom: 10px;
+        }
 
-        .data-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); margin-bottom: 10px; border-radius: 8px; border-left: 2px solid transparent; }
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 2px solid transparent;
+        }
 
-        .data-item:hover { background: rgba(255, 255, 255, 0.04); border-left-color: var(--accent); }
+        .data-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-left-color: var(--accent);
+        }
 
-        .data-primary { font-size: 14px; color: var(--text-main); display: block; }
+        .data-primary {
+            font-size: 14px;
+            color: var(--text-main);
+            display: block;
+        }
 
-        .data-sub { font-size: 12px; color: var(--text-muted); }
+        .data-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
 
-        .price-tag { color: var(--accent); font-family: 'Playfair Display', serif; font-size: 16px; }
+        .price-tag {
+            color: var(--accent);
+            font-family: 'Playfair Display', serif;
+            font-size: 16px;
+        }
 
         /* Highlights */
-        .data-panel:nth-child(3) .data-item { border-left-width: 3px; border-left-color: var(--accent); }
+        .data-panel:nth-child(3) .data-item {
+            border-left-width: 3px;
+            border-left-color: var(--accent);
+        }
 
         @media (max-width: 1024px) {
-            .content-grid { grid-template-columns: 1fr; }
-            .sidebar { width: 70px; }
-            .sidebar-brand, .sidebar-menu li a span { display: none; }
-            .main-content { margin-left: 70px; width: calc(100% - 70px); }
-            .sidebar-menu li a i { margin-right: 0; width: 100%; text-align: center; }
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar-brand,
+            .sidebar-menu li a span {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 70px;
+                width: calc(100% - 70px);
+            }
+
+            .sidebar-menu li a i {
+                margin-right: 0;
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        .panel-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .panel-link:hover .data-panel {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            transition: 0.3s;
+        }
+
+        .data-item {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -322,19 +423,21 @@ $top_selling = mysqli_query(
     <aside class="sidebar">
         <div class="sidebar-brand">AURALOOM</div>
         <ul class="sidebar-menu">
-            <li><a href="dashboard.php" class="active"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a></li>
+            <!-- <li><a href="dashboard.php" class="active"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a></li> -->
             <li><a href="manage_orders.php"><i class="fas fa-shopping-bag"></i> <span>Orders</span></a></li>
             <li><a href="manage_custom_orders.php"><i class="fas fa-palette"></i> <span>Custom Orders</span></a></li>
             <li><a href="manage_b2b.php"><i class="fas fa-building"></i> <span>B2B Enquiries</span></a></li>
             <li><a href="manage_products.php"><i class="fas fa-box"></i> <span>Products</span></a></li>
             <li><a href="manage_categories.php"><i class="fas fa-tags"></i> <span>Categories</span></a></li>
             <li><a href="manage_customers.php"><i class="fas fa-users"></i> <span>Customers</span></a></li>
-            <li><a href="manage-reviews.php"><i class="fas fa-star"></i> <span>Reviews</span></a></li>
+            <li><a href="manage-product-reviews.php"><i class="fas fa-star"></i> <span>Product Reviews</span></a></li>
             <li><a href="manage-testimonials.php"><i class="fas fa-comment-alt"></i> <span>Testimonials</span></a></li>
             <li><a href="manage_carts.php"><i class="fas fa-shopping-cart"></i> <span>Active Carts</span></a></li>
+            <li><a href="manage-contact-issue.php"><i class="fas fa-envelope"></i> <span>Contact Issues</span></a></li>
         </ul>
         <div class="sidebar-footer">
-            <a href="logout.php" class="logout-btn" style="border:none; color:#ff4d4d;"> <i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
+            <a href="admin_login.php" class="logout-btn" style="border:none; color:#ff4d4d;"> <i
+                    class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
         </div>
     </aside>
 
@@ -389,32 +492,36 @@ $top_selling = mysqli_query(
 
             <h3 class="section-title">Operations & Activity</h3>
             <div class="content-grid">
-                <div class="data-panel">
-                    <h4>Recent Customers</h4>
-                    <div class="data-list">
-                        <?php while ($row = mysqli_fetch_assoc($recent_customers)) { ?>
-                            <div class="data-item">
-                                <div>
-                                    <span class="data-primary"><?php echo htmlspecialchars($row['name']); ?></span>
-                                    <span class="data-sub"><?php echo htmlspecialchars($row['email']); ?></span>
+
+                <a href="manage_customers.php" class="panel-link">
+                    <div class="data-panel">
+                        <h4>Recent Customers</h4>
+                        <div class="data-list">
+                            <?php while ($row = mysqli_fetch_assoc($recent_customers)) { ?>
+                                <div class="data-item">
+                                    <div>
+                                        <span class="data-primary"><?php echo htmlspecialchars($row['name']); ?></span>
+                                        <span class="data-sub"><?php echo htmlspecialchars($row['email']); ?></span>
+                                    </div>
                                 </div>
-                            </div>
-                        <?php } ?>
+                            <?php } ?>
+                        </div>
                     </div>
-                </div>
+                </a>
 
                 <div class="data-panel">
                     <h4>New Products</h4>
                     <div class="data-list">
                         <?php while ($row = mysqli_fetch_assoc($recent_products)) { ?>
-                            <div class="data-item">
+                            <a href="manage_products.php" class="data-item">
                                 <div>
-                                    <span class="data-primary"><?php echo htmlspecialchars($row['name']); ?></span>
-                                    <span class="data-sub">ID: #<?php echo $row['id']; ?></span>
+                                    <span class="data-primary"><?= htmlspecialchars($row['name']); ?></span>
+                                    <span class="data-sub">ID: #<?= $row['id']; ?></span>
                                 </div>
-                                <span class="price-tag">₹<?php echo $row['price']; ?></span>
-                            </div>
+                                <span class="price-tag">₹<?= $row['price']; ?></span>
+                            </a>
                         <?php } ?>
+
                     </div>
                 </div>
 
@@ -439,7 +546,8 @@ $top_selling = mysqli_query(
                             <a href="manage_custom_orders.php#order-<?php echo $row['id']; ?>" class="data-item">
                                 <div>
                                     <span class="data-primary"><?php echo htmlspecialchars($row['name']); ?></span>
-                                    <span class="data-sub"><?php echo htmlspecialchars($row['order_type']); ?> • <?= ucfirst($row['status']) ?></span>
+                                    <span class="data-sub"><?php echo htmlspecialchars($row['order_type']); ?> •
+                                        <?= ucfirst($row['status']) ?></span>
                                 </div>
                                 <span class="price-tag"><?= $row['budget'] ? '₹' . $row['budget'] : '—' ?></span>
                             </a>
@@ -448,16 +556,25 @@ $top_selling = mysqli_query(
                 </div>
 
                 <div class="data-panel">
-                    <h4>Recent Reviews</h4>
+                    <h4>Recent Product Reviews</h4>
                     <div class="data-list">
                         <?php while ($row = mysqli_fetch_assoc($recent_reviews)) { ?>
-                            <div class="data-item">
+                            <a href="manage-product-reviews.php" class="data-item">
                                 <div>
-                                    <span class="data-primary"><?= htmlspecialchars($row['customer_name']) ?> • <?= htmlspecialchars($row['product_name']) ?></span>
-                                    <span class="data-sub"><?= $row['rating'] ?>★ • <span style="color: <?= $row['status'] == 'pending' ? '#ffb347' : '#7dd87d' ?>"><?= ucfirst($row['status']) ?></span></span>
+                                    <span class="data-primary">
+                                        <?= htmlspecialchars($row['customer_name']) ?> •
+                                        <?= htmlspecialchars($row['product_name']) ?>
+                                    </span>
+                                    <span class="data-sub">
+                                        <?= $row['rating'] ?>★ •
+                                        <span style="color: <?= $row['status'] == 'pending' ? '#ffb347' : '#7dd87d' ?>">
+                                            <?= ucfirst($row['status']) ?>
+                                        </span>
+                                    </span>
                                 </div>
-                            </div>
+                            </a>
                         <?php } ?>
+
                     </div>
                 </div>
 
@@ -468,9 +585,11 @@ $top_selling = mysqli_query(
                             <div class="data-item">
                                 <div>
                                     <span class="data-primary"><?= htmlspecialchars($row['business_name']) ?></span>
-                                    <span class="data-sub"><?= htmlspecialchars($row['business_type']) ?> • Qty: <?= $row['quantity'] ?></span>
+                                    <span class="data-sub"><?= htmlspecialchars($row['business_type']) ?> • Qty:
+                                        <?= $row['quantity'] ?></span>
                                 </div>
-                                <a href="https://wa.me/91<?= $row['phone'] ?>" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i></a>
+                                <a href="https://wa.me/91<?= $row['phone'] ?>" target="_blank" style="color:#25D366"><i
+                                        class="fab fa-whatsapp"></i></a>
                             </div>
                         <?php } ?>
                     </div>
@@ -480,4 +599,5 @@ $top_selling = mysqli_query(
     </main>
 
 </body>
+
 </html>

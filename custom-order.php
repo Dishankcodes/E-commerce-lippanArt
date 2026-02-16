@@ -71,6 +71,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Poppins:wght@300;400;500&display=swap"
     rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
   <style>
     :root {
@@ -386,7 +388,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
       <a href="about-us.php">About us</a>
       <a href="contact_us.php">Contact</a>
     </nav>
-    <a href="cart.php" class="header-btn">Cart</a>
+    <a href="cart.php" class="header-btn">Cart <i class="bi bi-cart"></i>
+    </a>
   </header>
 
   <section class="hero">

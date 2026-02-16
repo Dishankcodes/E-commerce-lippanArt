@@ -68,7 +68,8 @@ $total = mysqli_num_rows($products);
     <title>Collections | Auraloom</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
-
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
         :root {
             --bg-dark: #0f0d0b;
@@ -207,7 +208,8 @@ $total = mysqli_num_rows($products);
             <a href="about-us.php">About</a>
         </nav>
         <div class="header-actions">
-            <a href="cart.php" class="cart-btn">Cart (<?= $cart_count ?>)</a>
+            <a href="cart.php" class="cart-btn"><i class="bi bi-cart"></i>
+ Cart (<?= $cart_count ?>)</a>
         </div>
     </header>
 

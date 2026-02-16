@@ -260,11 +260,13 @@ $items = mysqli_query(
         <?= ucfirst($order['order_status']) ?>
       </div>
 
+
       <?php if ($order['order_status'] === 'Cancelled'): ?>
         <p style="color:#ff6b6b; margin-top:25px; font-weight: 500;">
           <i class="fas fa-exclamation-circle"></i> This order has been cancelled.
         </p>
       <?php endif; ?>
+      <p class="muted">  You will receive an email when your order status changes </p>
 
       <div class="timeline">
         <div class="t-step <?= in_array($order['order_status'], ['Placed', 'Processing', 'Shipped', 'Delivered']) ? 'active' : '' ?>">
